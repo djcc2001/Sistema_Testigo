@@ -143,3 +143,115 @@ exports.crearReporte = async (req, res) => {
     });
   }
 };
+
+// === LISTAR TODOS LOS REPORTES (PÚBLICO CON PAGINACIÓN) ===
+exports.listarReportes = async (req, res) => {
+  try {
+    const { pagina = 1, limite = 10 } = req.query;
+    const offset = (pagina - 1) * limite;
+
+    console.log(`Listando reportes - Página: ${pagina}, Límite: ${limite}`);
+
+    // Contar total de reportes
+    const countQuery = 'SELECT COUNT(*) FROM reportes';
+    const { rows: countRows } = await db.query(countQuery);
+    const total = parseInt(countRows[0].count);
+
+    // Obtener reportes con JOIN
+    const query = `
+      SELECT 
+        r.id,
+        r.titulo,
+        r.fecha,
+        r.hora,
+        er.estado,
+        c.descripcion as categoria,
+        CASE 
+          WHEN r.autoridad_id IS NOT NULL THEN true
+          ELSE false
+        END as asignado,
+        CASE 
+          WHEN r.autoridad_id IS NOT NULL 
+          THEN u.nombres || ' ' || u.apellido_paterno
+          ELSE NULL
+        END as autoridad_nombre
+      FROM reportes r
+      LEFT JOIN estado_reporte er ON r.estado_id = er.id
+      LEFT JOIN categoria c ON r.categoria_id = c.id
+      LEFT JOIN usuarios u ON r.autoridad_id = u.id
+      ORDER BY r.fecha DESC, r.hora DESC
+      LIMIT $1 OFFSET $2
+    `;
+
+    const { rows } = await db.query(query, [limite, offset]);
+
+    console.log(`Se encontraron ${rows.length} reportes de un total de ${total}`);
+
+    res.json({
+      reportes: rows,
+      paginacion: {
+        total,
+        pagina: parseInt(pagina),
+        limite: parseInt(limite),
+        totalPaginas: Math.ceil(total / limite)
+      }
+    });
+  } catch (error) {
+    console.error('Error al listar reportes:', error);
+    res.status(500).json({ 
+      error: 'Error al obtener reportes',
+      detalles: error.message 
+    });
+  }
+};
+
+// === OBTENER DETALLE DE UN REPORTE ESPECÍFICO ===
+exports.obtenerReportePorId = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    console.log(`Obteniendo detalle del reporte ID: ${id}`);
+
+    // Consulta principal del reporte
+    const query = `
+      SELECT 
+        r.*,
+        er.estado as estado_nombre,
+        c.descripcion as categoria,
+        uc.nombres || ' ' || uc.apellido_paterno as ciudadano_nombre,
+        uc.correo as ciudadano_correo,
+        aut.nombres || ' ' || aut.apellido_paterno as autoridad_nombre,
+        aut.correo as autoridad_contacto,
+        aut.nro_celular as autoridad_telefono
+      FROM reportes r
+      LEFT JOIN estado_reporte er ON r.estado_id = er.id
+      LEFT JOIN categoria c ON r.categoria_id = c.id
+      LEFT JOIN usuarios uc ON r.ciudadano_id = uc.id
+      LEFT JOIN usuarios aut ON r.autoridad_id = aut.id
+      WHERE r.id = $1
+    `;
+
+    const { rows } = await db.query(query, [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Reporte no encontrado' });
+    }
+
+    // Obtener evidencias del reporte
+    const evidenciasQuery = 'SELECT * FROM evidencias WHERE reporte_id = $1 ORDER BY id';
+    const { rows: evidencias } = await db.query(evidenciasQuery, [id]);
+
+    console.log(`Reporte encontrado con ${evidencias.length} evidencias`);
+
+    res.json({
+      ...rows[0],
+      evidencias
+    });
+  } catch (error) {
+    console.error('Error al obtener reporte:', error);
+    res.status(500).json({ 
+      error: 'Error al obtener el reporte',
+      detalles: error.message 
+    });
+  }
+};

@@ -18,6 +18,12 @@ const handleMulterError = (error, req, res, next) => {
   next(error);
 };
 
+// RUTA: Listar todos los reportes (público, con paginación)
+router.get('/', reportesController.listarReportes);
+
+// RUTA: Obtener detalle de un reporte específico
+router.get('/:id', reportesController.obtenerReportePorId);
+
 // RUTA: Crear reporte
 router.post(
   '/',

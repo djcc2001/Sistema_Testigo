@@ -107,7 +107,105 @@
   color: #006a3e;
 }
 
-/* eliminada la paginación: no se mostrará nada en el pie */
+.estado.nuevo {
+  background-color: #d0e8ff;
+  color: #004085;
+}
+
+.estado.en-revisión {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.estado.finalizado {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.estado.rechazado {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Estilos de paginación */
+.reportes-paginacion {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 20px 0;
+}
+
+.btn-paginacion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #00871d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s;
+}
+
+.btn-paginacion:hover:not(:disabled) {
+  background: #006515;
+}
+
+.btn-paginacion:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.paginas-numeros {
+  display: flex;
+  gap: 5px;
+}
+
+.btn-numero {
+  padding: 8px 12px;
+  background: #f1f5f9;
+  color: #1f2937;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.btn-numero:hover {
+  background: #e2e8f0;
+}
+
+.btn-numero.activo {
+  background: #00871d;
+  color: white;
+  border-color: #00871d;
+}
+
+.reportes-info {
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.reportes-loading,
+.reportes-error,
+.reportes-vacio {
+  text-align: center;
+  padding: 40px;
+  font-size: 16px;
+  color: #6b7280;
+}
+
+.reportes-error {
+  color: #dc2626;
+}
 
 /* responsive */
 @media (max-width: 768px) {
