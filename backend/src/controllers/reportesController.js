@@ -164,7 +164,7 @@ exports.listarReportes = async (req, res) => {
         r.titulo,
         r.fecha,
         r.hora,
-        er.estado,
+        er.estado as estado_nombre,
         c.descripcion as categoria,
         CASE 
           WHEN r.autoridad_id IS NOT NULL THEN true
@@ -200,6 +200,82 @@ exports.listarReportes = async (req, res) => {
     console.error('Error al listar reportes:', error);
     res.status(500).json({ 
       error: 'Error al obtener reportes',
+      detalles: error.message 
+    });
+  }
+};
+
+// === OBTENER REPORTES DEL USUARIO AUTENTICADO ===
+exports.obtenerReportesDelUsuario = async (req, res) => {
+  try {
+    const usuario = req.user;
+    const { pagina = 1, limite = 10 } = req.query;
+    const offset = (pagina - 1) * limite;
+
+    if (!usuario || !usuario.id) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    console.log(`Obteniendo reportes del usuario ID: ${usuario.id}`);
+
+    // Contar total de reportes del usuario
+    const countQuery = 'SELECT COUNT(*) FROM reportes WHERE ciudadano_id = $1';
+    const { rows: countRows } = await db.query(countQuery, [usuario.id]);
+    const total = parseInt(countRows[0].count);
+
+    // Obtener reportes del usuario con JOIN
+    const query = `
+      SELECT 
+        r.id,
+        r.titulo,
+        r.direccion,
+        r.distrito,
+        r.fecha,
+        r.hora,
+        er.estado as estado_nombre,
+        c.descripcion as categoria,
+        CASE 
+          WHEN r.autoridad_id IS NOT NULL THEN true
+          ELSE false
+        END as asignado,
+        CASE 
+          WHEN r.autoridad_id IS NOT NULL 
+          THEN u.nombres || ' ' || u.apellido_paterno
+          ELSE 'Sin Asignar'
+        END as entidad,
+        (
+          SELECT url_archivo 
+          FROM evidencias 
+          WHERE reporte_id = r.id 
+          ORDER BY id 
+          LIMIT 1
+        ) as imagen
+      FROM reportes r
+      LEFT JOIN estado_reporte er ON r.estado_id = er.id
+      LEFT JOIN categoria c ON r.categoria_id = c.id
+      LEFT JOIN usuarios u ON r.autoridad_id = u.id
+      WHERE r.ciudadano_id = $1
+      ORDER BY r.fecha DESC, r.hora DESC
+      LIMIT $2 OFFSET $3
+    `;
+
+    const { rows } = await db.query(query, [usuario.id, limite, offset]);
+
+    console.log(`Se encontraron ${rows.length} reportes del usuario de un total de ${total}`);
+
+    res.json({
+      reportes: rows,
+      paginacion: {
+        total,
+        pagina: parseInt(pagina),
+        limite: parseInt(limite),
+        totalPaginas: Math.ceil(total / limite)
+      }
+    });
+  } catch (error) {
+    console.error('Error al obtener reportes del usuario:', error);
+    res.status(500).json({ 
+      error: 'Error al obtener reportes del usuario',
       detalles: error.message 
     });
   }

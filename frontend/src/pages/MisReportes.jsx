@@ -1,97 +1,121 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { MapPin, Building2, CalendarDays, Eye } from "lucide-react";
 import LayoutPrincipal from "../components/PlantillaCiudadano";
 import "../style/MisReportes.css";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+
+const API_URL = "http://localhost:4000";
 
 const MisReportes = () => {
   const navigate = useNavigate();
+  const [reportes, setReportes] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
 
-  const reportes = [
-    {
-      id: 1,
-      titulo: "Problema Urbano 1",
-      direccion: "Jr. Manco Capac 123",
-      entidad: "Sin Asignar",
-      fecha: "Set 07, 2025",
-      estado: "Enviado",
-      imagen: "/baches.jpg",
-    },
-    {
-      id: 2,
-      titulo: "Problema Urbano 2",
-      direccion: "APV Pillao Matao",
-      entidad: "Sin Asignar",
-      fecha: "Set 05, 2025",
-      estado: "Enviado",
-      imagen: "/baches.jpg",
-    },
-    {
-      id: 3,
-      titulo: "Problema Urbano 3",
-      direccion: "Calle Mollecito 21",
-      entidad: "Municipalidad de San Sebastian",
-      fecha: "Jul 27, 2025",
-      estado: "En Revisión",
-      imagen: "/baches.jpg",
-    },
-    {
-      id: 4,
-      titulo: "Problema Urbano 4",
-      direccion: "CC El Paraiso",
-      entidad: "Municipalidad de Cusco",
-      fecha: "Jul 20, 2025",
-      estado: "Resuelto",
-      imagen: "/baches.jpg",
-    },
-  ];
+  useEffect(() => {
+    const obtenerMisReportes = async () => {
+      try {
+        setCargando(true);
+        setError(null);
+        
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setError("No estás autenticado");
+          setCargando(false);
+          return;
+        }
+
+        const response = await axios.get(`${API_URL}/reportes/usuario/mis-reportes`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        setReportes(response.data.reportes);
+      } catch (err) {
+        console.error("Error al obtener mis reportes:", err);
+        setError("No se pudieron cargar tus reportes. Por favor, intenta nuevamente.");
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    obtenerMisReportes();
+  }, []);
+
+  const formatearFecha = (fecha) => {
+    if (!fecha) return "N/A";
+    const date = new Date(fecha);
+    return date.toLocaleDateString('es-PE', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
 
   const getEstadoClase = (estado) => {
-    switch (estado) {
-      case "Enviado":
-        return "estado enviado";
-      case "En Revisión":
-        return "estado revision";
-      case "Resuelto":
-        return "estado resuelto";
-      default:
-        return "estado";
+    if (!estado) return "estado";
+    
+    const estadoNormalizado = estado.toLowerCase();
+    
+    if (estadoNormalizado.includes("nuevo") || estadoNormalizado.includes("enviado")) {
+      return "estado enviado";
     }
+    if (estadoNormalizado.includes("revisión") || estadoNormalizado.includes("revision") || estadoNormalizado.includes("proceso")) {
+      return "estado revision";
+    }
+    if (estadoNormalizado.includes("finalizado") || estadoNormalizado.includes("resuelto")) {
+      return "estado resuelto";
+    }
+    if (estadoNormalizado.includes("rechazado") || estadoNormalizado.includes("cancelado")) {
+      return "estado rechazado";
+    }
+    
+    return "estado";
   };
 
   return (
     <LayoutPrincipal tituloHeader="Mis Reportes">
       <div className="mis-reportes">
-        {reportes.map((r) => (
-          <div key={r.id} className="reporte-card">
-            <div className="reporte-img">
-              <img src={r.imagen} alt={r.titulo} />
+        {cargando ? (
+          <div style={{ textAlign: "center", padding: "50px" }}>Cargando tus reportes...</div>
+        ) : error ? (
+          <div style={{ textAlign: "center", padding: "50px", color: "red" }}>{error}</div>
+        ) : reportes.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "50px" }}>No tienes reportes aún.</div>
+        ) : (
+          reportes.map((r) => (
+            <div key={r.id} className="reporte-card">
+              <div className="reporte-img">
+                <img src={r.imagen || "/baches.jpg"} alt={r.titulo} />
+              </div>
+              <div className="reporte-info">
+                <h3>{r.titulo}</h3>
+                <p className="info-line">
+                  <MapPin size={16} /> {r.direccion || r.distrito || "Sin dirección"}
+                </p>
+                <p className="info-line">
+                  <Building2 size={16} /> {r.entidad}
+                </p>
+              </div>
+              <div className="reporte-meta">
+                <p className="info-line fecha">
+                  <CalendarDays size={16} /> {formatearFecha(r.fecha)}
+                </p>
+                <span className={getEstadoClase(r.estado_nombre)}>{r.estado_nombre}</span>
+                <button
+                  className="btn-detalle"
+                  onClick={() =>
+                    navigate(`/ciudadano/Mis-reportes/${r.id}`)
+                  }
+                >
+                  <Eye size={16} /> Ver Detalles
+                </button>
+              </div>
             </div>
-            <div className="reporte-info">
-              <h3>{r.titulo}</h3>
-              <p className="info-line">
-                <MapPin size={16} /> {r.direccion}
-              </p>
-              <p className="info-line">
-                <Building2 size={16} /> {r.entidad}
-              </p>
-            </div>
-            <div className="reporte-meta">
-              <p className="info-line fecha">
-                <CalendarDays size={16} /> {r.fecha}
-              </p>
-              <span className={getEstadoClase(r.estado)}>{r.estado}</span>
-              <button
-                className="btn-detalle"
-                onClick={() =>
-                  navigate(`/ciudadano/Mis-reportes/${r.id}`)
-                }
-              >
-                <Eye size={16} /> Ver Detalles
-              </button>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </LayoutPrincipal>
   );

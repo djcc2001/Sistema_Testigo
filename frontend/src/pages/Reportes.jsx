@@ -44,7 +44,7 @@ export default function Reportes() {
 
   // Cargar reportes al montar el componente
   useEffect(() => {
-    obtenerReportes(paginacion.pagina);
+    obtenerReportes(1);
   }, []);
 
   const verDetalle = (id) => {

@@ -7,42 +7,85 @@ import "../style/DetalleReporte.css";
 import "../style/reportesCarousel.css";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import axios from "axios";
 
-// Función mock para obtener datos del reporte por id
-const obtenerReporteMock = (id) => {
-  const ejemplo = {
-    id,
-    numero: `REP-2025-${String(id).padStart(4, "0")}`,
-    estado: id % 3 === 0 ? "Resuelto" : id % 3 === 1 ? "Enviado" : "En proceso",
-    categoria: "Vías y movilidad",
-    fechaCreacion: "10/09/2025",
-    titulo: `Bache peligroso #${id}`,
-    descripcion:
-      "En la Av. Los Olivos, frente al colegio San Martín, hay un bache de aproximadamente 40 cm de profundidad. Está generando accidentes a ciclistas y mototaxis.",
-    ubicacionTexto: "Av. Perú 345, San Sebastian",
-    coordenadas: { lat: -13.517088 + id * 0.0001, lng: -71.978535 + id * 0.0001 },
-    evidenciasCiudadano: ["/auto.jpg", "/baches.jpg", "/auto.jpg"],
-    institucion: id % 2 === 0 ? {
-      nombre: "Municipalidad de San Sebastian",
-      contacto: "mesa.ayuda@munisansebastian.gob.pe / +51 84 123456",
-      evidenciasResolucion: ["/Municipalidad-San-Sebastian.png"]
-    } : null,
-    ciudadanoId: 42
-  };
-  return ejemplo;
-};
+const API_URL = "http://localhost:4000";
 
 export default function DetalleReporte() {
   const { id } = useParams();
   const location = useLocation();
-  const { usuario } = useAutentificacion(); // 👈 para saber si es autoridad o ciudadano
+  const { usuario } = useAutentificacion();
   const [reporte, setReporte] = useState(null);
   const [indexImagen, setIndexImagen] = useState(0);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const datos = obtenerReporteMock(Number(id));
-    setReporte(datos);
+    const obtenerDetalleReporte = async () => {
+      try {
+        setCargando(true);
+        setError(null);
+        
+        const response = await axios.get(`${API_URL}/reportes/${id}`);
+        const data = response.data;
+        
+        // Transformar datos del backend al formato que usa el componente
+        const reporteFormateado = {
+          id: data.id,
+          numero: `REP-${new Date(data.fecha).getFullYear()}-${String(data.id).padStart(4, "0")}`,
+          estado: data.estado_nombre || "Enviado",
+          categoria: data.categoria || "Sin categoría",
+          fechaCreacion: data.fecha ? new Date(data.fecha).toLocaleDateString('es-PE') : "N/A",
+          titulo: data.titulo,
+          descripcion: data.descripcion,
+          ubicacionTexto: data.direccion || `${data.distrito || "Sin especificar"}`,
+          coordenadas: { 
+            lat: parseFloat(data.latitud) || -13.517088, 
+            lng: parseFloat(data.longitud) || -71.978535 
+          },
+          evidenciasCiudadano: data.evidencias?.map(e => e.url_archivo) || ["/auto.jpg"],
+          institucion: data.autoridad_nombre ? {
+            nombre: data.autoridad_nombre,
+            contacto: `${data.autoridad_contacto || "Sin correo"} ${data.autoridad_telefono ? `/ +51 ${data.autoridad_telefono}` : ""}`,
+            evidenciasResolucion: []
+          } : null,
+          ciudadanoId: data.ciudadano_id,
+          ciudadanoNombre: data.ciudadano_nombre,
+          ciudadanoCorreo: data.ciudadano_correo
+        };
+        
+        setReporte(reporteFormateado);
+      } catch (err) {
+        console.error("Error al obtener reporte:", err);
+        setError("No se pudo cargar el reporte. Por favor, intenta nuevamente.");
+      } finally {
+        setCargando(false);
+      }
+    };
+    
+    obtenerDetalleReporte();
   }, [id]);
+
+  // Mostrar loading o error
+  if (cargando) {
+    return (
+      <PlantillaCiudadano tituloHeader="Detalle Reporte">
+        <div className="detalle-container">
+          <div style={{ textAlign: "center", padding: "50px" }}>Cargando reporte...</div>
+        </div>
+      </PlantillaCiudadano>
+    );
+  }
+
+  if (error) {
+    return (
+      <PlantillaCiudadano tituloHeader="Detalle Reporte">
+        <div className="detalle-container">
+          <div style={{ textAlign: "center", padding: "50px", color: "red" }}>{error}</div>
+        </div>
+      </PlantillaCiudadano>
+    );
+  }
 
   if (!reporte) return null;
 
@@ -66,10 +109,14 @@ export default function DetalleReporte() {
   };
 
   const prevImagen = () => {
-    setIndexImagen((i) => (i - 1 + reporte.evidenciasCiudadano.length) % reporte.evidenciasCiudadano.length);
+    if (reporte.evidenciasCiudadano && reporte.evidenciasCiudadano.length > 0) {
+      setIndexImagen((i) => (i - 1 + reporte.evidenciasCiudadano.length) % reporte.evidenciasCiudadano.length);
+    }
   };
   const nextImagen = () => {
-    setIndexImagen((i) => (i + 1) % reporte.evidenciasCiudadano.length);
+    if (reporte.evidenciasCiudadano && reporte.evidenciasCiudadano.length > 0) {
+      setIndexImagen((i) => (i + 1) % reporte.evidenciasCiudadano.length);
+    }
   };
 
   return (
@@ -128,25 +175,29 @@ export default function DetalleReporte() {
 
         <div className="evidencias-galeria">
           <h3>Evidencias:</h3>
-          <div className="galeria">
-            <button className="flecha left" onClick={prevImagen} aria-label="Anterior">‹</button>
-            <div className="fila-thumbs">
-              {(() => {
-                const imgs = reporte.evidenciasCiudadano;
-                const len = imgs.length;
-                const prev = (indexImagen - 1 + len) % len;
-                const next = (indexImagen + 1) % len;
-                return (
-                  <>
-                    <img className="thumb left" src={imgs[prev]} alt={`prev ${prev + 1}`} onClick={() => setIndexImagen(prev)} />
-                    <img className="thumb center" src={imgs[indexImagen]} alt={`center ${indexImagen + 1}`} />
-                    <img className="thumb right" src={imgs[next]} alt={`next ${next + 1}`} onClick={() => setIndexImagen(next)} />
-                  </>
-                );
-              })()}
+          {reporte.evidenciasCiudadano && reporte.evidenciasCiudadano.length > 0 ? (
+            <div className="galeria">
+              <button className="flecha left" onClick={prevImagen} aria-label="Anterior">‹</button>
+              <div className="fila-thumbs">
+                {(() => {
+                  const imgs = reporte.evidenciasCiudadano;
+                  const len = imgs.length;
+                  const prev = (indexImagen - 1 + len) % len;
+                  const next = (indexImagen + 1) % len;
+                  return (
+                    <>
+                      <img className="thumb left" src={imgs[prev]} alt={`prev ${prev + 1}`} onClick={() => setIndexImagen(prev)} />
+                      <img className="thumb center" src={imgs[indexImagen]} alt={`center ${indexImagen + 1}`} />
+                      <img className="thumb right" src={imgs[next]} alt={`next ${next + 1}`} onClick={() => setIndexImagen(next)} />
+                    </>
+                  );
+                })()}
+              </div>
+              <button className="flecha right" onClick={nextImagen} aria-label="Siguiente">›</button>
             </div>
-            <button className="flecha right" onClick={nextImagen} aria-label="Siguiente">›</button>
-          </div>
+          ) : (
+            <p style={{ textAlign: "center", color: "#666" }}>No hay evidencias disponibles.</p>
+          )}
         </div>
 
         <div className="separador-con-circulo visible" aria-hidden>
