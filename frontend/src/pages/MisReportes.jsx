@@ -3,9 +3,7 @@ import { MapPin, Building2, CalendarDays, Eye } from "lucide-react";
 import LayoutPrincipal from "../components/PlantillaCiudadano";
 import "../style/MisReportes.css";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-
-const API_URL = "http://localhost:4000";
+import api from "../services/api";
 
 const MisReportes = () => {
   const navigate = useNavigate();
@@ -26,11 +24,7 @@ const MisReportes = () => {
           return;
         }
 
-        const response = await axios.get(`${API_URL}/reportes/usuario/mis-reportes`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await api.get('/reportes/usuario/mis-reportes');
 
         setReportes(response.data.reportes);
       } catch (err) {

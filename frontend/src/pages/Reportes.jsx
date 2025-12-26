@@ -3,9 +3,7 @@ import { useNavigate } from "react-router-dom";
 import LayoutPrincipal from "../components/PlantillaCiudadano";
 import "../style/Reportes.css";
 import { Eye, ChevronLeft, ChevronRight } from "lucide-react";
-import axios from "axios";
-
-const API_URL = "http://localhost:4000";
+import api from "../services/api";
 
 export default function Reportes() {
   const navigate = useNavigate();
@@ -25,7 +23,7 @@ export default function Reportes() {
       setCargando(true);
       setError(null);
       
-      const response = await axios.get(`${API_URL}/reportes`, {
+      const response = await api.get('/reportes', {
         params: {
           pagina,
           limite: 10

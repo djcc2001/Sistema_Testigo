@@ -7,9 +7,7 @@ import "../style/DetalleReporte.css";
 import "../style/reportesCarousel.css";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import axios from "axios";
-
-const API_URL = "http://localhost:4000";
+import api from "../services/api";
 
 export default function DetalleReporte() {
   const { id } = useParams();
@@ -26,7 +24,7 @@ export default function DetalleReporte() {
         setCargando(true);
         setError(null);
         
-        const response = await axios.get(`${API_URL}/reportes/${id}`);
+        const response = await api.get(`/reportes/${id}`);
         const data = response.data;
         
         // Transformar datos del backend al formato que usa el componente
