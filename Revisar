@@ -13,7 +13,12 @@ CLOUDINARY_CLOUD_NAME=dy3nlfmn1
 CLOUDINARY_API_KEY=393985661543912
 CLOUDINARY_API_SECRET=6EsQwkWS3HSQCM5jpnS6L-oND_Q
 
+# Servicio RENIEC - API Decolecta
+DECOLECTA_TOKEN=tu_token_de_decolecta
+
 
 /frontend/.env
-REACT_APP_DECOLECTA_TOKEN=--token de decolecta para la API del DNI
-REACT_APP_DECOLECTA_BASE_URL=https://api.decolecta.com/v1
+#### YA NO ES NECESARIO PONER UN .ENV EN EL FRONTEND ####
+
+# REACT_APP_DECOLECTA_TOKEN=--token de decolecta para la API del DNI
+# REACT_APP_DECOLECTA_BASE_URL=https://api.decolecta.com/v1

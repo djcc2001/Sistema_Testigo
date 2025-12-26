@@ -1,9 +1,5 @@
 // reniecService.js
-const BASE_URL = process.env.NODE_ENV === 'development' 
-  ? ''                                // En desarrollo, se usa proxy de React
-  : 'https://api.decolecta.com/v1';   // URL de producción
-
-const API_TOKEN = process.env.REACT_APP_DECOLECTA_TOKEN;
+import api from './api';
 
 // Cache para evitar consultas repetidas
 const cache = new Map();
@@ -25,45 +21,25 @@ export const consultarRENIEC = async (dni) => {
   }
 
   try {
-    const url = process.env.NODE_ENV === 'development'
-      ? `/v1/reniec/dni?numero=${dni}`
-      : `${BASE_URL}/reniec/dni?numero=${dni}`;
+    // Llama a TU backend (no directamente a Decolecta)
+    const response = await api.get(`/reniec/dni/${dni}`);
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${API_TOKEN}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    // axios ya parsea el JSON automáticamente
+    const result = response.data;
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        cache.set(dni, null);
-        throw new Error('DNI no encontrado en RENIEC');
-      }
-      if (response.status === 401) {
-        throw new Error('Token de API inválido');
-      }
-      throw new Error(`Error ${response.status} en la consulta`);
-    }
-
-    const result = await response.json();
-
-    // Validar errores en la respuesta
-    if (result.message === "not found" || result.error) {
+    // Verificar si la respuesta es exitosa
+    if (!result.ok) {
       cache.set(dni, null);
-      throw new Error('DNI no encontrado en RENIEC');
+      throw new Error(result.error || 'DNI no encontrado en RENIEC');
     }
 
     // Procesar respuesta exitosa
-    if (result.first_name) {
+    if (result.nombres) {
       const userData = {
-        nombres: result.first_name,
-        apellidos: `${result.first_last_name} ${result.second_last_name}`.trim(),
-        documentNumber: result.document_number,
-        fullName: result.full_name,
-        datosCompletos: result
+        nombres: result.nombres,
+        apellidos: result.apellidos,
+        documentNumber: result.documentNumber,
+        fullName: result.fullName
       };
       
       cache.set(dni, userData);
@@ -73,13 +49,30 @@ export const consultarRENIEC = async (dni) => {
     throw new Error('Formato de respuesta no reconocido');
 
   } catch (error) {
-    console.error('Error en consulta:', error.message);
+    console.error('Error en consulta RENIEC:', error.message);
 
-    // Mensaje específico si es problema de CORS
-    if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
-      console.error('Problema de CORS - Verifica la configuración del proxy');
+    // Si es un error de axios con respuesta del servidor
+    if (error.response) {
+      const errorMsg = error.response.data?.error || 'Error en la consulta';
+      
+      if (error.response.status === 404) {
+        cache.set(dni, null);
+        throw new Error('DNI no encontrado en RENIEC');
+      }
+      if (error.response.status === 503) {
+        throw new Error('Servicio RENIEC no disponible. Configure DECOLECTA_TOKEN en el backend');
+      }
+      
+      throw new Error(errorMsg);
     }
 
+    // Error de red o conexión
     throw error;
   }
+};
+
+// Función para limpiar el cache
+export const limpiarCache = () => {
+  cache.clear();
+  console.log('Cache de RENIEC limpiado');
 };

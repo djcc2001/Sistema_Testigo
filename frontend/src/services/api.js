@@ -4,7 +4,7 @@ import axios from 'axios';
 
 // Configuración base de Axios
 const api = axios.create({
-    baseURL: 'http://localhost:4000', // URL base del backend
+    baseURL: process.env.REACT_APP_API_URL || 'http://localhost:4000', // URL base del backend
     timeout: 10000, // Tiempo máximo de espera en ms
 });
 

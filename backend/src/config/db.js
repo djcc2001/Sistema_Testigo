@@ -1,12 +1,23 @@
 const { Pool } = require('pg');
 
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASS,
-  port: process.env.DB_PORT,
-});
+// Configuración de conexión a PostgreSQL
+// Prioriza DATABASE_URL (formato de Neon/Render) sobre variables individuales
+const pool = new Pool(
+  process.env.DATABASE_URL
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: {
+          rejectUnauthorized: false, // Necesario para Neon
+        },
+      }
+    : {
+        user: process.env.DB_USER,
+        host: process.env.DB_HOST,
+        database: process.env.DB_NAME,
+        password: process.env.DB_PASS,
+        port: process.env.DB_PORT,
+      }
+);
 
 // Función para probar conexión y reconectar si falla
 const conectarDB = async () => {

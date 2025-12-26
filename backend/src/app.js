@@ -1,10 +1,11 @@
 // app.js
 
+// Cargar dotenv (safe en producción - no hace nada si no existe .env)
 require('dotenv').config();
 
 // Verificar que JWT_SECRET esté definido
 if (!process.env.JWT_SECRET) {
-  throw new Error('JWT_SECRET no definido en .env');
+  throw new Error('JWT_SECRET no definido');
 }
 
 const express = require('express');
@@ -20,8 +21,10 @@ app.use(express.json());   // Parseo de JSON en el body de las solicitudes
 // Rutas
 const usuariosRoutes = require('./routes/usuariosRoutes');
 const reportesRoutes = require('./routes/reportesRoutes');
+const reniecRoutes = require('./routes/reniecRoutes');
 app.use('/usuarios', usuariosRoutes);
 app.use('/reportes', reportesRoutes);
+app.use('/reniec', reniecRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
