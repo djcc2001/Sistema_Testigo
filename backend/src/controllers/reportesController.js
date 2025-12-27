@@ -1,14 +1,15 @@
+// reportesController.js
 const cloudinary = require("cloudinary").v2;
-const db = require("../config/db");
+const ReportesModel = require("../models/reportesModel");
 
-// === CONFIGURAR CLOUDINARY ===
+// Configurar Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// === CREAR REPORTE ===
+// Crear reporte
 exports.crearReporte = async (req, res) => {
   try {
     console.log("=== INICIANDO CREACIÓN DE REPORTE ===");
@@ -24,11 +25,11 @@ exports.crearReporte = async (req, res) => {
       longitud,
       direccion,
       distrito,
-      categoria, // nombre recibido desde el frontend
-      estado_id = 1, // por defecto "Nuevo"
+      categoria,
+      estado_id = 1,
     } = req.body;
 
-    // === VALIDACIONES ===
+    // Validaciones
     if (!titulo || !descripcion || !categoria || !latitud || !longitud) {
       return res.status(400).json({
         error: "Faltan campos obligatorios.",
@@ -40,7 +41,7 @@ exports.crearReporte = async (req, res) => {
       return res.status(401).json({ error: "Usuario no autenticado." });
     }
 
-    // === SUBIR ARCHIVOS A CLOUDINARY ===
+    // Subir archivos a Cloudinary
     let evidenciasSubidas = [];
     if (req.files && req.files.length > 0) {
       console.log(`Subiendo ${req.files.length} archivos a Cloudinary...`);
@@ -54,8 +55,7 @@ exports.crearReporte = async (req, res) => {
             fetch_format: "auto",
           });
 
-          const tipoArchivo =
-            resultado.resource_type === "video" ? "video" : "foto";
+          const tipoArchivo = resultado.resource_type === "video" ? "video" : "foto";
 
           evidenciasSubidas.push({
             url: resultado.secure_url,
@@ -63,31 +63,15 @@ exports.crearReporte = async (req, res) => {
             public_id: resultado.public_id,
           });
 
-          console.log(
-            `Archivo subido correctamente: ${resultado.secure_url} (${tipoArchivo})`
-          );
+          console.log(`Archivo subido: ${resultado.secure_url} (${tipoArchivo})`);
         } catch (err) {
-          console.error("Error subiendo archivo a Cloudinary:", err.message);
+          console.error("Error subiendo archivo:", err.message);
         }
       }
     }
 
-    // === INSERTAR REPORTE EN BD ===
-    console.log("Insertando reporte en la base de datos...");
-
-    const insertReporteQuery = `
-      INSERT INTO reportes (
-        titulo, descripcion, latitud, longitud, direccion, distrito,
-        estado_id, ciudadano_id, categoria_id, fecha, hora
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 
-        (SELECT id FROM categoria WHERE descripcion = $9 LIMIT 1),
-        CURRENT_DATE, CURRENT_TIME
-      )
-      RETURNING id
-    `;
-
-    const insertValues = [
+    // Crear reporte en la base de datos
+    const idReporte = await ReportesModel.crearReporte({
       titulo,
       descripcion,
       latitud,
@@ -95,34 +79,28 @@ exports.crearReporte = async (req, res) => {
       direccion,
       distrito,
       estado_id,
-      usuario.id,
-      categoria,
-    ];
+      ciudadano_id: usuario.id,
+      categoria_descripcion: categoria,
+    });
 
-    const { rows } = await db.query(insertReporteQuery, insertValues);
-    const idReporte = rows[0].id;
     console.log(`Reporte creado con ID: ${idReporte}`);
 
-    // === INSERTAR EVIDENCIAS (si existen) ===
+    // Insertar evidencias si existen
     if (evidenciasSubidas.length > 0) {
       console.log(`Insertando ${evidenciasSubidas.length} evidencias...`);
-      const insertEvidenciaQuery = `
-        INSERT INTO evidencias (reporte_id, url_archivo, tipo)
-        VALUES ($1, $2, $3)
-      `;
 
       for (const evidencia of evidenciasSubidas) {
-        await db.query(insertEvidenciaQuery, [
+        await ReportesModel.insertarEvidencia(
           idReporte,
           evidencia.url,
-          evidencia.tipo,
-        ]);
+          evidencia.tipo
+        );
       }
 
       console.log(`${evidenciasSubidas.length} evidencias insertadas.`);
     }
 
-    // === RESPUESTA EXITOSA ===
+    // Respuesta exitosa
     console.log("Reporte procesado completamente.");
     res.status(201).json({
       mensaje: "Reporte enviado correctamente.",
@@ -144,7 +122,7 @@ exports.crearReporte = async (req, res) => {
   }
 };
 
-// === LISTAR TODOS LOS REPORTES (PÚBLICO CON PAGINACIÓN) ===
+// Listar todos los reportes (público con paginación)
 exports.listarReportes = async (req, res) => {
   try {
     const { pagina = 1, limite = 10 } = req.query;
@@ -152,60 +130,27 @@ exports.listarReportes = async (req, res) => {
 
     console.log(`Listando reportes - Página: ${pagina}, Límite: ${limite}`);
 
-    // Contar total de reportes
-    const countQuery = 'SELECT COUNT(*) FROM reportes';
-    const { rows: countRows } = await db.query(countQuery);
-    const total = parseInt(countRows[0].count);
-
-    // Obtener reportes con JOIN
-    const query = `
-      SELECT 
-        r.id,
-        r.titulo,
-        r.fecha,
-        r.hora,
-        er.estado as estado_nombre,
-        c.descripcion as categoria,
-        CASE 
-          WHEN r.autoridad_id IS NOT NULL THEN true
-          ELSE false
-        END as asignado,
-        CASE 
-          WHEN r.autoridad_id IS NOT NULL 
-          THEN u.nombres || ' ' || u.apellido_paterno
-          ELSE NULL
-        END as autoridad_nombre
-      FROM reportes r
-      LEFT JOIN estado_reporte er ON r.estado_id = er.id
-      LEFT JOIN categoria c ON r.categoria_id = c.id
-      LEFT JOIN usuarios u ON r.autoridad_id = u.id
-      ORDER BY r.fecha DESC, r.hora DESC
-      LIMIT $1 OFFSET $2
-    `;
-
-    const { rows } = await db.query(query, [limite, offset]);
-
-    console.log(`Se encontraron ${rows.length} reportes de un total de ${total}`);
+    const resultado = await ReportesModel.listarReportes(limite, offset);
 
     res.json({
-      reportes: rows,
+      reportes: resultado.reportes,
       paginacion: {
-        total,
+        total: resultado.total,
         pagina: parseInt(pagina),
         limite: parseInt(limite),
-        totalPaginas: Math.ceil(total / limite)
-      }
+        totalPaginas: Math.ceil(resultado.total / limite),
+      },
     });
   } catch (error) {
-    console.error('Error al listar reportes:', error);
-    res.status(500).json({ 
-      error: 'Error al obtener reportes',
-      detalles: error.message 
+    console.error("Error al listar reportes:", error);
+    res.status(500).json({
+      error: "Error al obtener reportes",
+      detalles: error.message,
     });
   }
 };
 
-// === OBTENER REPORTES DEL USUARIO AUTENTICADO ===
+// Obtener reportes del usuario autenticado
 exports.obtenerReportesDelUsuario = async (req, res) => {
   try {
     const usuario = req.user;
@@ -213,121 +158,54 @@ exports.obtenerReportesDelUsuario = async (req, res) => {
     const offset = (pagina - 1) * limite;
 
     if (!usuario || !usuario.id) {
-      return res.status(401).json({ error: 'Usuario no autenticado' });
+      return res.status(401).json({ error: "Usuario no autenticado" });
     }
 
     console.log(`Obteniendo reportes del usuario ID: ${usuario.id}`);
 
-    // Contar total de reportes del usuario
-    const countQuery = 'SELECT COUNT(*) FROM reportes WHERE ciudadano_id = $1';
-    const { rows: countRows } = await db.query(countQuery, [usuario.id]);
-    const total = parseInt(countRows[0].count);
-
-    // Obtener reportes del usuario con JOIN
-    const query = `
-      SELECT 
-        r.id,
-        r.titulo,
-        r.direccion,
-        r.distrito,
-        r.fecha,
-        r.hora,
-        er.estado as estado_nombre,
-        c.descripcion as categoria,
-        CASE 
-          WHEN r.autoridad_id IS NOT NULL THEN true
-          ELSE false
-        END as asignado,
-        CASE 
-          WHEN r.autoridad_id IS NOT NULL 
-          THEN u.nombres || ' ' || u.apellido_paterno
-          ELSE 'Sin Asignar'
-        END as entidad,
-        (
-          SELECT url_archivo 
-          FROM evidencias 
-          WHERE reporte_id = r.id 
-          ORDER BY id 
-          LIMIT 1
-        ) as imagen
-      FROM reportes r
-      LEFT JOIN estado_reporte er ON r.estado_id = er.id
-      LEFT JOIN categoria c ON r.categoria_id = c.id
-      LEFT JOIN usuarios u ON r.autoridad_id = u.id
-      WHERE r.ciudadano_id = $1
-      ORDER BY r.fecha DESC, r.hora DESC
-      LIMIT $2 OFFSET $3
-    `;
-
-    const { rows } = await db.query(query, [usuario.id, limite, offset]);
-
-    console.log(`Se encontraron ${rows.length} reportes del usuario de un total de ${total}`);
+    const resultado = await ReportesModel.obtenerReportesPorUsuario(
+      usuario.id,
+      limite,
+      offset
+    );
 
     res.json({
-      reportes: rows,
+      reportes: resultado.reportes,
       paginacion: {
-        total,
+        total: resultado.total,
         pagina: parseInt(pagina),
         limite: parseInt(limite),
-        totalPaginas: Math.ceil(total / limite)
-      }
+        totalPaginas: Math.ceil(resultado.total / limite),
+      },
     });
   } catch (error) {
-    console.error('Error al obtener reportes del usuario:', error);
-    res.status(500).json({ 
-      error: 'Error al obtener reportes del usuario',
-      detalles: error.message 
+    console.error("Error al obtener reportes del usuario:", error);
+    res.status(500).json({
+      error: "Error al obtener reportes del usuario",
+      detalles: error.message,
     });
   }
 };
 
-// === OBTENER DETALLE DE UN REPORTE ESPECÍFICO ===
+// Obtener detalle de un reporte específico
 exports.obtenerReportePorId = async (req, res) => {
   try {
     const { id } = req.params;
-
     console.log(`Obteniendo detalle del reporte ID: ${id}`);
 
-    // Consulta principal del reporte
-    const query = `
-      SELECT 
-        r.*,
-        er.estado as estado_nombre,
-        c.descripcion as categoria,
-        uc.nombres || ' ' || uc.apellido_paterno as ciudadano_nombre,
-        uc.correo as ciudadano_correo,
-        aut.nombres || ' ' || aut.apellido_paterno as autoridad_nombre,
-        aut.correo as autoridad_contacto,
-        aut.nro_celular as autoridad_telefono
-      FROM reportes r
-      LEFT JOIN estado_reporte er ON r.estado_id = er.id
-      LEFT JOIN categoria c ON r.categoria_id = c.id
-      LEFT JOIN usuarios uc ON r.ciudadano_id = uc.id
-      LEFT JOIN usuarios aut ON r.autoridad_id = aut.id
-      WHERE r.id = $1
-    `;
+    const reporte = await ReportesModel.obtenerReportePorId(id);
 
-    const { rows } = await db.query(query, [id]);
-    
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Reporte no encontrado' });
+    if (!reporte) {
+      return res.status(404).json({ error: "Reporte no encontrado" });
     }
 
-    // Obtener evidencias del reporte
-    const evidenciasQuery = 'SELECT * FROM evidencias WHERE reporte_id = $1 ORDER BY id';
-    const { rows: evidencias } = await db.query(evidenciasQuery, [id]);
-
-    console.log(`Reporte encontrado con ${evidencias.length} evidencias`);
-
-    res.json({
-      ...rows[0],
-      evidencias
-    });
+    console.log(`Reporte encontrado con ${reporte.evidencias.length} evidencias`);
+    res.json(reporte);
   } catch (error) {
-    console.error('Error al obtener reporte:', error);
-    res.status(500).json({ 
-      error: 'Error al obtener el reporte',
-      detalles: error.message 
+    console.error("Error al obtener reporte:", error);
+    res.status(500).json({
+      error: "Error al obtener el reporte",
+      detalles: error.message,
     });
   }
 };
