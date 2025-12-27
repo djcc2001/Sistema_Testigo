@@ -1,6 +1,6 @@
-import React, { useState, /*useEffect*/ } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-// import { getInstituciones } from "../services/usuariosService";
+import { getInstituciones } from "../services/usuariosService";
 import PlantillaAdmin from "../components/PlantillaAdmin";
 import "../style/InstitucionesColaboradoras.css";
 
@@ -8,86 +8,28 @@ const ListarInstituciones = () => {
   const navigate = useNavigate();
   const [busqueda, setBusqueda] = useState("");
 
-  // Datos de prueba (dummy)
-  const institucionesDummy = [
-    {
-      id: 1,
-      nombres: "Usuario 1",
-      reportes_recibidos: 3,
-      correo: "alma.lawson@example.com",
-    },
-    {
-      id: 2,
-      nombres: "Usuario 2",
-      reportes_recibidos: 2,
-      correo: "tim.jennings@example.com",
-    },
-    {
-      id: 3,
-      nombres: "Usuario 3",
-      reportes_recibidos: 5,
-      correo: "debra.holt@example.com",
-    },
-    {
-      id: 4,
-      nombres: "Usuario 4",
-      reportes_recibidos: 3,
-      correo: "kenzi.lawson@example.com",
-    },
-    {
-      id: 5,
-      nombres: "Usuario 5",
-      reportes_recibidos: 1,
-      correo: "georgia.young@example.com",
-    },
-    {
-      id: 6,
-      nombres: "Usuario 6",
-      reportes_recibidos: 4,
-      correo: "michelle.rivera@example.com",
-    },
-    {
-      id: 7,
-      nombres: "Usuario 7",
-      reportes_recibidos: 2,
-      correo: "georgia.young@example.com",
-    },
-    {
-      id: 8,
-      nombres: "Usuario 8",
-      reportes_recibidos: 1,
-      correo: "alma.lawson@example.com",
-    },
-    {
-      id: 9,
-      nombres: "Usuario 9",
-      reportes_recibidos: 3,
-      correo: "bill.sanders@example.com",
-    },
-  ];
+  const [instituciones, setInstituciones] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // const [instituciones, setInstituciones] = useState([]);
-  // const [loading, setLoading] = useState(true);
-  // const [error, setError] = useState(null);
+  useEffect(() => {
+    const fetchInstituciones = async () => {
+      try {
+        const data = await getInstituciones();
+        setInstituciones(data);
+      } catch (err) {
+        console.error(err);
+        setError("No se pudo cargar la lista de instituciones");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // useEffect(() => {
-  //   const fetchInstituciones = async () => {
-  //     try {
-  //       const data = await getInstituciones();
-  //       setInstituciones(data);
-  //     } catch (err) {
-  //       console.error(err);
-  //       setError("No se pudo cargar la lista de instituciones");
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   fetchInstituciones();
-  // }, []);
+    fetchInstituciones();
+  }, []);
 
   // Filtrado por nombre o correo
-  const institucionesFiltradas = institucionesDummy.filter((i) =>
+  const institucionesFiltradas = instituciones.filter((i) =>
     (i.nombres || "").toLowerCase().includes(busqueda.toLowerCase()) ||
     (i.correo || "").toLowerCase().includes(busqueda.toLowerCase())
   );
