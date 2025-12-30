@@ -347,6 +347,134 @@ class ReportesModel {
       distribucionEstado
     };
   }
+
+  // Obtener resumen de reportes para autoridad
+  // Incluye reportes sin asignar (NULL) o asignados a esta autoridad
+  static async obtenerResumenAutoridad(autoridad_id) {
+    // Recibidos: todos los reportes sin asignar o asignados a esta autoridad
+    const recibidosQuery = `
+      SELECT COUNT(*) as total
+      FROM reportes
+      WHERE autoridad_id IS NULL OR autoridad_id = $1
+    `;
+    const { rows: recibidosRows } = await pool.query(recibidosQuery, [autoridad_id]);
+    const recibidos = Number(recibidosRows[0].total) || 0;
+
+    // Pendientes: reportes sin asignar o asignados con estado Nuevo (1) o En revisión (2)
+    const pendientesQuery = `
+      SELECT COUNT(*) as total
+      FROM reportes
+      WHERE (autoridad_id IS NULL OR autoridad_id = $1)
+        AND estado_id IN (1, 2)
+    `;
+    const { rows: pendientesRows } = await pool.query(pendientesQuery, [autoridad_id]);
+    const pendientes = Number(pendientesRows[0].total) || 0;
+
+    // Resueltos: reportes sin asignar o asignados a esta autoridad con estado Finalizado (3)
+    const resueltosQuery = `
+      SELECT COUNT(*) as total
+      FROM reportes
+      WHERE (autoridad_id IS NULL OR autoridad_id = $1)
+        AND estado_id = 3
+    `;
+    const { rows: resueltosRows } = await pool.query(resueltosQuery, [autoridad_id]);
+    const resueltos = Number(resueltosRows[0].total) || 0;
+
+    return {
+      recibidos,
+      pendientes,
+      resueltos
+    };
+  }
+
+  // Listar reportes asignados a autoridad con filtros
+  // Muestra reportes sin asignar (NULL) o asignados a esta autoridad
+  static async listarReportesAutoridad(autoridad_id, filtros = {}) {
+    const { estado_id, busqueda, limite = 50, offset = 0 } = filtros;
+
+    // Construir condiciones WHERE
+    // Mostrar reportes sin asignar (NULL) o asignados a esta autoridad
+    let condiciones = ['(r.autoridad_id IS NULL OR r.autoridad_id = $1)'];
+    let valores = [autoridad_id];
+    let indice = 2;
+
+    // Filtro por estado
+    if (estado_id) {
+      condiciones.push(`r.estado_id = $${indice++}`);
+      valores.push(estado_id);
+    }
+
+    // Filtro por búsqueda (título, dirección, nombre ciudadano)
+    if (busqueda && busqueda.trim()) {
+      condiciones.push(`(
+        r.titulo ILIKE $${indice} OR
+        r.direccion ILIKE $${indice} OR
+        r.distrito ILIKE $${indice} OR
+        CONCAT(u.nombres, ' ', u.apellido_paterno, ' ', u.apellido_materno) ILIKE $${indice}
+      )`);
+      valores.push(`%${busqueda.trim()}%`);
+      indice++;
+    }
+
+    const condicionesSQL = condiciones.join(' AND ');
+
+    // Query principal
+    const query = `
+      SELECT 
+        r.id,
+        r.titulo,
+        r.descripcion,
+        r.direccion,
+        r.distrito,
+        r.fecha,
+        r.hora,
+        r.estado_id,
+        er.estado AS estado_nombre,
+        c.descripcion AS categoria,
+        CONCAT(u.nombres, ' ', u.apellido_paterno, ' ', u.apellido_materno) AS nombre_ciudadano,
+        u.dni AS dni_ciudadano,
+        u.correo AS correo_ciudadano,
+        u.nro_celular AS telefono_ciudadano,
+        (
+          SELECT e.url_archivo 
+          FROM evidencias e 
+          WHERE e.reporte_id = r.id AND e.tipo = 'foto'
+          ORDER BY e.id
+          LIMIT 1
+        ) AS imagen_principal,
+        json_agg(
+          json_build_object('url', e.url_archivo, 'tipo', e.tipo)
+        ) FILTER (WHERE e.id IS NOT NULL) AS evidencias
+      FROM reportes r
+      LEFT JOIN estado_reporte er ON r.estado_id = er.id
+      LEFT JOIN categoria c ON r.categoria_id = c.id
+      LEFT JOIN usuarios u ON r.ciudadano_id = u.id
+      LEFT JOIN evidencias e ON r.id = e.reporte_id
+      WHERE ${condicionesSQL}
+      GROUP BY r.id, er.estado, c.descripcion, u.nombres, u.apellido_paterno, u.apellido_materno, u.dni, u.correo, u.nro_celular
+      ORDER BY r.fecha DESC, r.hora DESC
+      LIMIT $${indice++} OFFSET $${indice}
+    `;
+
+    valores.push(limite, offset);
+    const { rows } = await pool.query(query, valores);
+
+    // Contar total para paginación
+    const countQuery = `
+      SELECT COUNT(DISTINCT r.id) as total
+      FROM reportes r
+      LEFT JOIN usuarios u ON r.ciudadano_id = u.id
+      WHERE ${condicionesSQL}
+    `;
+    const countValores = valores.slice(0, -2); // Quitar limite y offset
+    const { rows: countRows } = await pool.query(countQuery, countValores);
+    const total = Number(countRows[0].total) || 0;
+
+    return {
+      reportes: rows,
+      total
+    };
+  }
 }
 
 module.exports = ReportesModel;

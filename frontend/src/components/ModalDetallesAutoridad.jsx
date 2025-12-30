@@ -13,7 +13,10 @@ export default function ModalDetallesAutoridad({ open, onClose, reporte }) {
   // Si el modal no está abierto o no hay reporte → no mostrar
   if (!open || !reporte) return null;
 
-  const imgs = reporte.evidencias || [];
+  // Formatear evidencias: pueden ser array de URLs o array de objetos {url, tipo}
+  const imgs = Array.isArray(reporte.evidencias)
+    ? reporte.evidencias.map(e => (typeof e === 'string' ? e : e.url || e))
+    : [];
   const len = imgs.length;
 
   const nextImagen = () => {
@@ -46,8 +49,7 @@ export default function ModalDetallesAutoridad({ open, onClose, reporte }) {
 
             <p><strong>Descripción:</strong></p>
             <p className="descripcion-texto">
-              Lorem ipsum dolor sit amet consectetur. Ut varius id blandit ac dui non non. 
-              Condimentum urna vitae viverra feugiat rhoncus quis leo mi turpis.
+              {reporte.descripcion || "Sin descripción disponible"}
             </p>
 
             {/* GALERÍA / CARRUSEL */}
@@ -102,8 +104,12 @@ export default function ModalDetallesAutoridad({ open, onClose, reporte }) {
           <div className="bloque">
             <h3>Detalles del reporte</h3>
             
-            <p><strong>Categoría:</strong> Tránsito</p>
-            <p><strong>Ubicación:</strong> {reporte.direccion}</p>
+            {reporte.categoria && (
+              <p><strong>Categoría:</strong> {reporte.categoria}</p>
+            )}
+            <p><strong>Ubicación:</strong> {reporte.direccion || "Ubicación no disponible"}
+              {reporte.distrito && `, ${reporte.distrito}`}
+            </p>
 
             <div className="mapa-modal">
               <MapContainer
@@ -158,11 +164,22 @@ export default function ModalDetallesAutoridad({ open, onClose, reporte }) {
           <div className="bloque">
             <h3>Información del ciudadano</h3>
 
-            <p><strong>Nombres:</strong> CRISTHOPFER ALBERTO</p>
-            <p><strong>Apellidos:</strong> VALIENTE DIAZ</p>
-            <p><strong>DNI:</strong> 73025412</p>
-            <p><strong>e-mail:</strong> correo3@prueba.com</p>
-            <p><strong>Teléfono:</strong> +51 912 345 678</p>
+            {reporte.nombre_ciudadano ? (
+              <>
+                <p><strong>Nombre completo:</strong> {reporte.nombre_ciudadano}</p>
+                {reporte.dni_ciudadano && (
+                  <p><strong>DNI:</strong> {reporte.dni_ciudadano}</p>
+                )}
+                {reporte.correo_ciudadano && (
+                  <p><strong>e-mail:</strong> {reporte.correo_ciudadano}</p>
+                )}
+                {reporte.telefono_ciudadano && (
+                  <p><strong>Teléfono:</strong> {reporte.telefono_ciudadano}</p>
+                )}
+              </>
+            ) : (
+              <p>Información del ciudadano no disponible</p>
+            )}
 
           </div>
 

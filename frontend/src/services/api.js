@@ -143,6 +143,23 @@ export const reportesService = {
     // Obtener estadísticas del ciudadano autenticado
     obtenerEstadisticasCiudadano: async () => {
         return await api.get("/reportes/estadisticas/ciudadano");
+    },
+
+    // Obtener resumen de reportes para autoridad
+    obtenerResumenAutoridad: async () => {
+        return await api.get("/reportes/autoridad/resumen");
+    },
+
+    // Listar reportes asignados a autoridad con filtros
+    listarReportesAutoridad: async (filtros = {}) => {
+        const params = new URLSearchParams();
+        if (filtros.estado_id) params.append('estado_id', filtros.estado_id);
+        if (filtros.busqueda) params.append('busqueda', filtros.busqueda);
+        if (filtros.pagina) params.append('pagina', filtros.pagina);
+        if (filtros.limite) params.append('limite', filtros.limite);
+        
+        const queryString = params.toString();
+        return await api.get(`/reportes/autoridad/reportes${queryString ? '?' + queryString : ''}`);
     }
 };
 
@@ -154,6 +171,8 @@ export const obtenerReportesUsuario = reportesService.obtenerPorUsuario;
 export const obtenerReportesRecientes = reportesService.obtenerRecientes;
 export const obtenerEstadisticasGenerales = reportesService.obtenerEstadisticasGenerales;
 export const obtenerEstadisticasCiudadano = reportesService.obtenerEstadisticasCiudadano;
+export const obtenerResumenAutoridad = reportesService.obtenerResumenAutoridad;
+export const listarReportesAutoridad = reportesService.listarReportesAutoridad;
 
 // Exportar funciones individuales para uso directo
 export const login = authService.login;

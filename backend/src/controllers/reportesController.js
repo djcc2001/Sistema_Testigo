@@ -276,3 +276,77 @@ exports.obtenerEstadisticasCiudadano = async (req, res) => {
     });
   }
 };
+
+// Obtener resumen de reportes para autoridad
+exports.obtenerResumenAutoridad = async (req, res) => {
+  try {
+    const usuario = req.user;
+    
+    if (!usuario || !usuario.id) {
+      return res.status(401).json({ error: "Usuario no autenticado" });
+    }
+
+    if (usuario.rol !== 'autoridad') {
+      return res.status(403).json({ error: "Acceso denegado. Solo para autoridades" });
+    }
+
+    console.log(`Obteniendo resumen de reportes para autoridad ID: ${usuario.id}`);
+
+    const resumen = await ReportesModel.obtenerResumenAutoridad(usuario.id);
+
+    res.json({
+      ok: true,
+      resumen: resumen
+    });
+  } catch (error) {
+    console.error("Error al obtener resumen de autoridad:", error);
+    res.status(500).json({
+      error: "Error al obtener resumen de reportes",
+      detalles: error.message,
+    });
+  }
+};
+
+// Listar reportes asignados a autoridad con filtros
+exports.listarReportesAutoridad = async (req, res) => {
+  try {
+    const usuario = req.user;
+    
+    if (!usuario || !usuario.id) {
+      return res.status(401).json({ error: "Usuario no autenticado" });
+    }
+
+    if (usuario.rol !== 'autoridad') {
+      return res.status(403).json({ error: "Acceso denegado. Solo para autoridades" });
+    }
+
+    const { estado_id, busqueda, pagina = 1, limite = 50 } = req.query;
+    const offset = (parseInt(pagina) - 1) * parseInt(limite);
+
+    console.log(`Listando reportes para autoridad ID: ${usuario.id}`, { estado_id, busqueda });
+
+    const resultado = await ReportesModel.listarReportesAutoridad(usuario.id, {
+      estado_id: estado_id ? parseInt(estado_id) : null,
+      busqueda: busqueda || null,
+      limite: parseInt(limite),
+      offset
+    });
+
+    res.json({
+      ok: true,
+      reportes: resultado.reportes,
+      paginacion: {
+        total: resultado.total,
+        pagina: parseInt(pagina),
+        limite: parseInt(limite),
+        totalPaginas: Math.ceil(resultado.total / parseInt(limite))
+      }
+    });
+  } catch (error) {
+    console.error("Error al listar reportes de autoridad:", error);
+    res.status(500).json({
+      error: "Error al obtener reportes",
+      detalles: error.message,
+    });
+  }
+};

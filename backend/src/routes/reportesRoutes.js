@@ -30,6 +30,12 @@ router.get('/estadisticas/generales', reportesController.obtenerEstadisticasGene
 // RUTA: Obtener estadísticas del ciudadano autenticado
 router.get('/estadisticas/ciudadano', verificarToken, reportesController.obtenerEstadisticasCiudadano);
 
+// RUTA: Obtener resumen de reportes para autoridad
+router.get('/autoridad/resumen', verificarToken, reportesController.obtenerResumenAutoridad);
+
+// RUTA: Listar reportes asignados a autoridad con filtros
+router.get('/autoridad/reportes', verificarToken, reportesController.listarReportesAutoridad);
+
 // RUTA: Obtener reportes del usuario autenticado
 router.get('/usuario/mis-reportes', verificarToken, reportesController.obtenerReportesDelUsuario);
 
