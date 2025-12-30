@@ -38,10 +38,12 @@ const Login = () => {
       newErrors.username = 'Por favor ingresa un correo o DNI';
     } else {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const dniRegex = /^\d{11}$/;
+      const dniRegex = /^\d{8}$/;
+      const rucRegex = /^\d{11}$/;
       const isEmail = emailRegex.test(username);
       const isDNI = dniRegex.test(username);
-      if (!isEmail && !isDNI) {
+      const isRUC = rucRegex.test(username);
+      if (!isEmail && !isDNI && !isRUC) {
         newErrors.username = 'Ingresa un correo válido, DNI o RUC';
       }
     }
@@ -120,13 +122,13 @@ const Login = () => {
 
           <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group">
-              <label htmlFor="username">Correo o DNI:</label>
+              <label htmlFor="username">Correo, DNI o RUC:</label>
               <input
                 type="text"
                 id="username"
                 name="username"
                 className={`form-control ${errors.username ? 'error' : ''}`}
-                placeholder="Ingresa tu correo o DNI"
+                placeholder="Ingresa tu correo, DNI o RUC"
                 value={formData.username}
                 onChange={handleChange}
                 disabled={loading}
