@@ -38,11 +38,11 @@ const Login = () => {
       newErrors.username = 'Por favor ingresa un correo o DNI';
     } else {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const dniRegex = /^\d{8}$/;
+      const dniRegex = /^\d{11}$/;
       const isEmail = emailRegex.test(username);
       const isDNI = dniRegex.test(username);
       if (!isEmail && !isDNI) {
-        newErrors.username = 'Ingresa un correo válido o DNI de 8 dígitos';
+        newErrors.username = 'Ingresa un correo válido, DNI o RUC';
       }
     }
 

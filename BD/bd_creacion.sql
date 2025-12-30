@@ -75,7 +75,7 @@ VALUES
 (1, 'Congestión y fluidez vehicular'),
 (2, 'Seguridad vial y accidentes'),
 (3, 'Infraestructura vial'),
-(4, 'Movilidad peatonal y no motorizada')
+(4, 'Movilidad peatonal y no motorizada'),
 (5, 'Transporte público'),
 (6, 'Regulación y fiscalización'),
 (7, 'Impacto ambiental'),
