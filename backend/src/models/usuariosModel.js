@@ -99,6 +99,18 @@ const getInstitucionesConReportes = async () => {
   return result.rows;
 };
 
+// Eliminar usuario por ID
+const eliminarUsuario = async (id) => {
+  const query = `
+    DELETE FROM usuarios
+    WHERE id = $1
+    RETURNING id
+  `;
+  const result = await pool.query(query, [id]);
+  return result.rowCount > 0;
+};
+
+
 
 module.exports = {
   getUsuarios,
@@ -106,5 +118,6 @@ module.exports = {
   buscarUsuarioPorCorreoODni,
   getUsuarioPorId,
   actualizarUsuario,
-  getInstitucionesConReportes
+  getInstitucionesConReportes,
+  eliminarUsuario
 };

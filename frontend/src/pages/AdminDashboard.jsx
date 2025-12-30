@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUsuarios } from "../services/usuariosService";
+import { eliminarUsuario } from "../services/usuariosService";
 import PlantillaAdmin from "../components/PlantillaAdmin";
 import "../style/ListarUsuarios.css";
 
@@ -26,13 +27,33 @@ const AdminDashboard = () => {
     fetchUsuarios();
   }, []);
 
-  const usuariosFiltrados = usuarios.filter((u) =>
-    `${u.nombres} ${u.apellido_paterno} ${u.apellido_materno}`
-      .toLowerCase()
-      .includes(busqueda.toLowerCase()) ||
-    u.dni.toLowerCase().includes(busqueda.toLowerCase()) ||
-    u.correo.toLowerCase().includes(busqueda.toLowerCase())
-  );
+  const usuariosFiltrados = usuarios.filter((u) => {
+    const rolesPermitidos = ["admin", "ciudadano", "Usuario"];
+
+    const coincideBusqueda =
+      `${u.nombres} ${u.apellido_paterno} ${u.apellido_materno}`
+        .toLowerCase()
+        .includes(busqueda.toLowerCase()) ||
+      u.dni.toLowerCase().includes(busqueda.toLowerCase()) ||
+      u.correo.toLowerCase().includes(busqueda.toLowerCase());
+
+    return rolesPermitidos.includes(u.rol) && coincideBusqueda;
+  });
+
+  const handleEliminar = async (id) => {
+    const confirmar = window.confirm(
+      "¿Estás seguro de eliminar este usuario?"
+    );
+
+    if (!confirmar) return;
+
+    try {
+      await eliminarUsuario(id);
+      setUsuarios((prev) => prev.filter((u) => u.id !== id));
+    } catch (error) {
+      alert("No se pudo eliminar el usuario");
+    }
+  };
 
   if (loading) return <p>Cargando usuarios...</p>;
   if (error) return <p>{error}</p>;
@@ -89,8 +110,14 @@ const AdminDashboard = () => {
                     Ver...
                   </span>
                 </td>
-                <td> 
-                  <span className="eliminar">❌</span>
+                <td>
+                  <button
+                    className="btn-eliminar"
+                    onClick={() => handleEliminar(user.id)}
+                    title="Eliminar usuario"
+                  >
+                    ❌
+                  </button>
                 </td>
               </tr>
             ))}

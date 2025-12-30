@@ -51,3 +51,13 @@ export const getInstituciones = async () => {
     throw error;
   }
 };
+
+export const eliminarUsuario = async (id) => {
+  try {
+    const response = await api.delete(`/usuarios/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error al eliminar usuario con id ${id}:`, error);
+    throw error;
+  }
+};

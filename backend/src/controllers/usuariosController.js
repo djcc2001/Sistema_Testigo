@@ -195,6 +195,20 @@ const listarInstituciones = async (req, res) => {
   }
 };
 
+// Eliminar usuario por ID (modo admin)
+const eliminarUsuarioPorId = async (id) => {
+  const eliminado = await usuariosModel.eliminarUsuario(id);
+
+  if (!eliminado) {
+    const error = new Error('Usuario no encontrado');
+    error.status = 404;
+    throw error;
+  }
+
+  return eliminado;
+};
+
+
 module.exports = {
   listarUsuarios,
   crearUsuario,
@@ -204,5 +218,6 @@ module.exports = {
   actualizarPerfil,
   obtenerUsuarioPorId,
   actualizarUsuarioPorId,
-  listarInstituciones
+  listarInstituciones,
+  eliminarUsuarioPorId
 };

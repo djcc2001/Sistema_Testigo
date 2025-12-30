@@ -18,3 +18,32 @@
   cursor: pointer;
   margin-right: 10px;
 }
+
+.btn-eliminar {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 6px;
+  border-radius: 6px;
+  transition: 
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.btn-eliminar:hover {
+  background-color: rgba(230, 57, 70, 0.1);
+  color: #e63946;
+  transform: scale(1.2);
+}
+
+.btn-eliminar:active {
+  transform: scale(1.05);
+}
+
+.btn-eliminar:focus {
+  outline: 2px solid #e63946;
+  outline-offset: 2px;
+}
+

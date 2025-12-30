@@ -48,5 +48,21 @@ router.put('/:id', verificarToken, permitirRol(['admin']), upload.single('foto')
   }
 });
 
+// Eliminar usuario por ID (solo admin)
+router.delete(
+  '/:id',
+  verificarToken,
+  permitirRol(['admin']),
+  async (req, res, next) => {
+    try {
+      await usuariosController.eliminarUsuarioPorId(req.params.id);
+      res.json({ ok: true, mensaje: 'Usuario eliminado correctamente' });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+
 module.exports = router;
 
