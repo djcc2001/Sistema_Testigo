@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import LayoutPrincipal from "../components/PlantillaCiudadano";
 import {
   PieChart, Pie, Cell,
@@ -6,49 +6,78 @@ import {
   LineChart, Line, CartesianGrid, ResponsiveContainer
 } from "recharts";
 import "../style/EstadisticasCiudadano.css";
+import { obtenerEstadisticasCiudadano } from "../services/api";
 
 // Colores para los gráficos
 const colores = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#a770ef", "#4b7bec", "#e74c3c", "#2ecc71"];
 
 export default function EstadisticasCiudadano() {
-  // --- DATOS SIMULADOS (pueden venir del backend luego) ---
-  const totalReportes = 120;
-  const reportesResueltos = 75;
-  const porcentajeResueltos = ((reportesResueltos / totalReportes) * 100).toFixed(1);
-  const promedioDiasResolucion = 6.4;
+  const [cargando, setCargando] = useState(true);
+  const [estadisticas, setEstadisticas] = useState({
+    kpis: {
+      totalReportes: 0,
+      reportesResueltos: 0,
+      porcentajeResueltos: 0,
+      tiempoPromedioDias: 0
+    },
+    distribucionCategoria: [],
+    tendenciaTiempo: [],
+    distribucionEstado: []
+  });
 
-  // Distribución por categoría
-  const datosCategoria = [
-    { categoria: "Congestion vehicular", cantidad: 20 },
-    { categoria: "Accidentes de transito", cantidad: 15 },
-    { categoria: "Problemas de infraestructura vial", cantidad: 25 },
-    { categoria: "Problemas de movilidad peatonal y ciclista", cantidad: 18 },
-    { categoria: "Problemas de transporte publico", cantidad: 10 },
-    { categoria: "Problemas de regulacion y control", cantidad: 12 },
-    { categoria: "Problemas ambientales asociados", cantidad: 8 },
-    { categoria: "Otros", cantidad: 12 },
-  ];
+  useEffect(() => {
+    const cargarEstadisticas = async () => {
+      try {
+        setCargando(true);
+        const response = await obtenerEstadisticasCiudadano();
+        if (response.data.ok && response.data.estadisticas) {
+          setEstadisticas(response.data.estadisticas);
+        }
+      } catch (error) {
+        console.error("Error al cargar estadísticas:", error);
+        // Mantener valores por defecto en caso de error
+      } finally {
+        setCargando(false);
+      }
+    };
 
-  // Tendencia de reportes en el tiempo
-  const datosTiempo = [
-    { mes: "Ene", reportes: 10 },
-    { mes: "Feb", reportes: 15 },
-    { mes: "Mar", reportes: 18 },
-    { mes: "Abr", reportes: 25 },
-    { mes: "May", reportes: 20 },
-    { mes: "Jun", reportes: 15 },
-    { mes: "Jul", reportes: 22 },
-    { mes: "Ago", reportes: 18 },
-    { mes: "Set", reportes: 30 },
-  ];
+    cargarEstadisticas();
+  }, []);
 
-  // Distribución por estado
-  const datosEstado = [
-    { nombre: "Enviado", valor: 20 },
-    { nombre: "En proceso", valor: 30 },
-    { nombre: "Resuelto", valor: 60 },
-    { nombre: "Archivado", valor: 10 },
-  ];
+  // Extraer datos para facilitar el uso
+  const { kpis, distribucionCategoria, tendenciaTiempo, distribucionEstado } = estadisticas;
+  const totalReportes = kpis.totalReportes || 0;
+  const porcentajeResueltos = kpis.porcentajeResueltos || 0;
+  const promedioDiasResolucion = kpis.tiempoPromedioDias || 0;
+
+  // Formatear datos de categoría para el gráfico
+  const datosCategoria = distribucionCategoria.map(item => ({
+    categoria: item.categoria,
+    cantidad: item.cantidad
+  }));
+
+  // Formatear datos de tendencia
+  const datosTiempo = tendenciaTiempo.length > 0 
+    ? tendenciaTiempo 
+    : [{ mes: "Sin datos", reportes: 0 }];
+
+  // Formatear datos de estado
+  const datosEstado = distribucionEstado.map(item => ({
+    nombre: item.nombre || "Sin nombre",
+    valor: Number(item.valor) || 0
+  })).filter(item => item.valor > 0); // Filtrar estados con valor 0
+
+  if (cargando) {
+    return (
+      <LayoutPrincipal tituloHeader="Estadísticas">
+        <div className="panel-estadisticas">
+          <div style={{ padding: "3rem", textAlign: "center" }}>
+            <p>Cargando estadísticas...</p>
+          </div>
+        </div>
+      </LayoutPrincipal>
+    );
+  }
 
   return (
     <LayoutPrincipal tituloHeader="Estadísticas">
@@ -74,54 +103,82 @@ export default function EstadisticasCiudadano() {
           {/* Gráfico de categorías */}
           <div className="grafico-card">
             <h3>Reportes por Categoría</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={datosCategoria}>
-                <XAxis dataKey="categoria" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={70} />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="cantidad" fill="#4b7bec" />
-              </BarChart>
-            </ResponsiveContainer>
+            {datosCategoria.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={datosCategoria}>
+                  <XAxis 
+                    dataKey="categoria" 
+                    tick={{ fontSize: 10 }} 
+                    interval={0} 
+                    angle={-20} 
+                    textAnchor="end" 
+                    height={70} 
+                  />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="cantidad" fill="#4b7bec" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ padding: "2rem", textAlign: "center" }}>
+                <p>No hay datos de categorías disponibles</p>
+              </div>
+            )}
           </div>
 
           {/* Gráfico de tendencia */}
           <div className="grafico-card">
             <h3>Tendencia de Reportes en el Tiempo</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={datosTiempo}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mes" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="reportes" stroke="#00C49F" strokeWidth={3} />
-              </LineChart>
-            </ResponsiveContainer>
+            {datosTiempo.length > 0 && datosTiempo[0].reportes !== undefined ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={datosTiempo}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="mes" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="reportes" stroke="#00C49F" strokeWidth={3} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ padding: "2rem", textAlign: "center" }}>
+                <p>No hay datos de tendencia disponibles</p>
+              </div>
+            )}
           </div>
 
           {/* Gráfico de estado */}
           <div className="grafico-card">
             <h3>Distribución por Estado</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={datosEstado}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="valor"
-                  label
-                >
-                  {datosEstado.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={colores[index % colores.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            {datosEstado.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={datosEstado}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="valor"
+                    nameKey="nombre"
+                    label={({ valor, percent }) => `${valor} (${(percent * 100).toFixed(0)}%)`}
+                  >
+                    {datosEstado.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={colores[index % colores.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value, name) => [value, name]}
+                  />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ padding: "2rem", textAlign: "center" }}>
+                <p>No hay datos de estados disponibles</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

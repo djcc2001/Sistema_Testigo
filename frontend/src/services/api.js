@@ -138,6 +138,11 @@ export const reportesService = {
     // Obtener estadísticas generales
     obtenerEstadisticasGenerales: async () => {
         return await api.get("/reportes/estadisticas/generales");
+    },
+
+    // Obtener estadísticas del ciudadano autenticado
+    obtenerEstadisticasCiudadano: async () => {
+        return await api.get("/reportes/estadisticas/ciudadano");
     }
 };
 
@@ -148,6 +153,7 @@ export const obtenerTodosReportes = reportesService.obtenerTodos;
 export const obtenerReportesUsuario = reportesService.obtenerPorUsuario;
 export const obtenerReportesRecientes = reportesService.obtenerRecientes;
 export const obtenerEstadisticasGenerales = reportesService.obtenerEstadisticasGenerales;
+export const obtenerEstadisticasCiudadano = reportesService.obtenerEstadisticasCiudadano;
 
 // Exportar funciones individuales para uso directo
 export const login = authService.login;

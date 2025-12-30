@@ -236,6 +236,117 @@ class ReportesModel {
       tiempoPromedioHoras
     };
   }
+
+  // Obtener estadísticas del ciudadano autenticado
+  static async obtenerEstadisticasCiudadano(ciudadano_id) {
+    // KPIs: Total de reportes, reportes resueltos, tiempo promedio
+    const kpisQuery = `
+      SELECT 
+        COUNT(*) as total_reportes,
+        COUNT(*) FILTER (WHERE estado_id = 3) as reportes_resueltos,
+        AVG(
+          EXTRACT(EPOCH FROM (NOW() - (fecha::timestamp + hora::time))) / 86400.0
+        ) FILTER (WHERE estado_id = 3) as dias_promedio_resolucion
+      FROM reportes
+      WHERE ciudadano_id = $1
+    `;
+    const { rows: kpisRows } = await pool.query(kpisQuery, [ciudadano_id]);
+    const kpis = kpisRows[0];
+    const totalReportes = Number(kpis.total_reportes) || 0;
+    const reportesResueltos = Number(kpis.reportes_resueltos) || 0;
+    const porcentajeResueltos = totalReportes > 0 
+      ? Number(((reportesResueltos / totalReportes) * 100).toFixed(1))
+      : 0;
+    const tiempoPromedioDias = kpis.dias_promedio_resolucion 
+      ? Number(Number(kpis.dias_promedio_resolucion).toFixed(1))
+      : 0;
+
+    // Distribución por categoría
+    const categoriaQuery = `
+      SELECT 
+        c.descripcion AS categoria,
+        COUNT(*) AS cantidad
+      FROM reportes r
+      LEFT JOIN categoria c ON r.categoria_id = c.id
+      WHERE r.ciudadano_id = $1
+      GROUP BY c.id, c.descripcion
+      ORDER BY cantidad DESC
+    `;
+    const { rows: categoriaRows } = await pool.query(categoriaQuery, [ciudadano_id]);
+    const distribucionCategoria = categoriaRows.map(row => ({
+      categoria: row.categoria || "Sin categoría",
+      cantidad: Number(row.cantidad)
+    }));
+
+    // Tendencia de reportes en el tiempo (últimos 12 meses)
+    const tendenciaQuery = `
+      SELECT 
+        TO_CHAR(fecha, 'Mon') AS mes_nombre,
+        TO_CHAR(fecha, 'YYYY-MM') AS mes_orden,
+        COUNT(*) AS cantidad
+      FROM reportes
+      WHERE ciudadano_id = $1
+        AND fecha >= CURRENT_DATE - INTERVAL '12 months'
+      GROUP BY TO_CHAR(fecha, 'Mon'), TO_CHAR(fecha, 'YYYY-MM')
+      ORDER BY mes_orden ASC
+    `;
+    const { rows: tendenciaRows } = await pool.query(tendenciaQuery, [ciudadano_id]);
+    
+    // Mapear nombres de meses en español
+    const mesesEsp = {
+      'Jan': 'Ene', 'Feb': 'Feb', 'Mar': 'Mar', 'Apr': 'Abr',
+      'May': 'May', 'Jun': 'Jun', 'Jul': 'Jul', 'Aug': 'Ago',
+      'Sep': 'Set', 'Oct': 'Oct', 'Nov': 'Nov', 'Dec': 'Dic'
+    };
+    
+    const tendenciaTiempo = tendenciaRows.map(row => {
+      const mesNombre = row.mes_nombre.trim();
+      const mesCorto = mesesEsp[mesNombre] || mesNombre;
+      return {
+        mes: mesCorto,
+        reportes: Number(row.cantidad)
+      };
+    });
+
+    // Distribución por estado
+    const estadoQuery = `
+      SELECT 
+        er.estado AS nombre_estado,
+        er.id AS estado_id,
+        COUNT(*) AS cantidad
+      FROM reportes r
+      LEFT JOIN estado_reporte er ON r.estado_id = er.id
+      WHERE r.ciudadano_id = $1
+      GROUP BY er.id, er.estado
+      ORDER BY er.id
+    `;
+    const { rows: estadoRows } = await pool.query(estadoQuery, [ciudadano_id]);
+    
+    // Mapear estados a nombres más amigables
+    const estadoMap = {
+      'Nuevo': 'Enviado',
+      'En revisión': 'En proceso',
+      'Finalizado': 'Resuelto',
+      'Archivado': 'Archivado'
+    };
+    
+    const distribucionEstado = estadoRows.map(row => ({
+      nombre: estadoMap[row.nombre_estado] || row.nombre_estado,
+      valor: Number(row.cantidad)
+    }));
+
+    return {
+      kpis: {
+        totalReportes,
+        reportesResueltos,
+        porcentajeResueltos,
+        tiempoPromedioDias
+      },
+      distribucionCategoria,
+      tendenciaTiempo,
+      distribucionEstado
+    };
+  }
 }
 
 module.exports = ReportesModel;

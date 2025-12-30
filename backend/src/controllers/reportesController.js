@@ -250,3 +250,29 @@ exports.obtenerEstadisticasGenerales = async (req, res) => {
     });
   }
 };
+
+// Obtener estadísticas del ciudadano autenticado
+exports.obtenerEstadisticasCiudadano = async (req, res) => {
+  try {
+    const usuario = req.user;
+    
+    if (!usuario || !usuario.id) {
+      return res.status(401).json({ error: "Usuario no autenticado" });
+    }
+
+    console.log(`Obteniendo estadísticas del ciudadano ID: ${usuario.id}`);
+
+    const estadisticas = await ReportesModel.obtenerEstadisticasCiudadano(usuario.id);
+
+    res.json({
+      ok: true,
+      estadisticas: estadisticas
+    });
+  } catch (error) {
+    console.error("Error al obtener estadísticas del ciudadano:", error);
+    res.status(500).json({
+      error: "Error al obtener estadísticas del ciudadano",
+      detalles: error.message,
+    });
+  }
+};
