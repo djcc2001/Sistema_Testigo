@@ -209,3 +209,44 @@ exports.obtenerReportePorId = async (req, res) => {
     });
   }
 };
+
+// Obtener los 5 reportes más recientes para el carrusel
+exports.obtenerReportesRecientes = async (req, res) => {
+  try {
+    const limite = parseInt(req.query.limite) || 5;
+    console.log(`Obteniendo ${limite} reportes más recientes para carrusel`);
+
+    const reportes = await ReportesModel.obtenerReportesRecientes(limite);
+
+    res.json({
+      ok: true,
+      reportes: reportes
+    });
+  } catch (error) {
+    console.error("Error al obtener reportes recientes:", error);
+    res.status(500).json({
+      error: "Error al obtener reportes recientes",
+      detalles: error.message,
+    });
+  }
+};
+
+// Obtener estadísticas generales del sistema
+exports.obtenerEstadisticasGenerales = async (req, res) => {
+  try {
+    console.log("Obteniendo estadísticas generales");
+
+    const estadisticas = await ReportesModel.obtenerEstadisticasGenerales();
+
+    res.json({
+      ok: true,
+      estadisticas: estadisticas
+    });
+  } catch (error) {
+    console.error("Error al obtener estadísticas:", error);
+    res.status(500).json({
+      error: "Error al obtener estadísticas",
+      detalles: error.message,
+    });
+  }
+};

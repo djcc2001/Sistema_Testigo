@@ -1,9 +1,41 @@
+import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar.jsx";
 import "../style/inicio.css";
 import Mapa from "../components/mapaInicio.jsx";
 import ReportesCarousel from "../components/ReportesCarousel";
+import { obtenerEstadisticasGenerales } from "../services/api";
 
 export default function Inicio() {
+  const [estadisticas, setEstadisticas] = useState({
+    totalReportes: 0,
+    tasaResolucion: 0,
+    tiempoPromedioHoras: 0
+  });
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    const cargarEstadisticas = async () => {
+      try {
+        setCargando(true);
+        const response = await obtenerEstadisticasGenerales();
+        if (response.data.ok && response.data.estadisticas) {
+          setEstadisticas(response.data.estadisticas);
+        }
+      } catch (error) {
+        console.error("Error al cargar estadísticas:", error);
+        // Mantener valores por defecto en caso de error
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    cargarEstadisticas();
+  }, []);
+
+  // Calcular el gradiente de la rosquilla basado en el porcentaje
+  const porcentajeRosquilla = estadisticas.tasaResolucion || 0;
+  const gradienteRosquilla = `conic-gradient(#00871d ${porcentajeRosquilla}%, #e5e5e5 0)`;
+
   return (
     <div>
         <Navbar />
@@ -31,7 +63,7 @@ export default function Inicio() {
         <div className="item-estadistica tarjeta1">
           <div className="encabezado">
             <img src="/megafono-img.png" alt="Reportes" />
-            <h2>750</h2>
+            <h2>{cargando ? "..." : estadisticas.totalReportes}</h2>
           </div>
           <div className="texto-mejora">
             <span>Denuncias recibidas</span>
@@ -41,9 +73,12 @@ export default function Inicio() {
 
         {/* TARJETA 2 */}
         <div className="item-estadistica tarjeta2">
-          <div className="rosquilla">
+          <div 
+            className="rosquilla"
+            style={{ background: gradienteRosquilla }}
+          >
             <div className="rosquilla-interna"></div>
-            <div className="porcentaje">75%</div>
+            <div className="porcentaje">{cargando ? "..." : `${porcentajeRosquilla}%`}</div>
           </div>
           <p>Tasa de resolución</p>
         </div>
@@ -54,7 +89,7 @@ export default function Inicio() {
 
           {/* Agrupamos el número y la unidad */}
           <div className="valor-tiempo">
-            <h2>12</h2>
+            <h2>{cargando ? "..." : estadisticas.tiempoPromedioHoras}</h2>
             <p className="unidad">horas</p>
           </div>
 

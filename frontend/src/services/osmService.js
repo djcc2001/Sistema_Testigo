@@ -73,7 +73,9 @@ function formatearFechaHora(fecha, hora) {
     const fechaFormateada = fechaObj.toLocaleDateString('es-PE', opciones);
 
     if (hora) {
-      return `${fechaFormateada} a las ${hora}`;
+      // Quitar microsegundos si los tiene (formato HH:MM:SS.microsegundos)
+      const horaFormateada = hora.includes('.') ? hora.split('.')[0] : hora;
+      return `${fechaFormateada} a las ${horaFormateada}`;
     }
 
     return fechaFormateada;
@@ -93,7 +95,9 @@ function calcularTiempoRelativo(fecha, hora) {
     let fechaReporte = new Date(fecha);
 
     if (hora) {
-      const partes = hora.split(':');
+      // Quitar microsegundos si los tiene
+      const horaLimpia = hora.includes('.') ? hora.split('.')[0] : hora;
+      const partes = horaLimpia.split(':');
       const horas = parseInt(partes[0], 10) || 0;
       const minutos = parseInt(partes[1], 10) || 0;
       const segundos = parseInt(partes[2], 10) || 0;

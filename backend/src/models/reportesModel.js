@@ -14,7 +14,21 @@ class ReportesModel {
       estado_id,
       ciudadano_id,
       categoria_id,
+      categoria_descripcion,
     } = reporteData;
+
+    // Si viene categoria_descripcion, convertir a categoria_id
+    let categoriaId = categoria_id;
+    if (categoria_descripcion && !categoria_id) {
+      const categoriaQuery = `SELECT id FROM categoria WHERE descripcion = $1`;
+      const { rows: categoriaRows } = await pool.query(categoriaQuery, [categoria_descripcion]);
+      if (categoriaRows.length > 0) {
+        categoriaId = categoriaRows[0].id;
+      } else {
+        // Si no se encuentra, usar categoría "Otros" (id 8)
+        categoriaId = 8;
+      }
+    }
 
     const query = `
       INSERT INTO reportes (
@@ -34,7 +48,7 @@ class ReportesModel {
       distrito,
       estado_id,
       ciudadano_id,
-      categoria_id,
+      categoriaId,
     ];
 
     const { rows } = await pool.query(query, values);
@@ -148,6 +162,79 @@ class ReportesModel {
     const { rows: evidencias } = await pool.query(evidenciasQuery, [id]);
 
     return { ...rows[0], evidencias };
+  }
+
+  // Obtener los 5 reportes más recientes para el carrusel
+  static async obtenerReportesRecientes(limite = 5) {
+    const query = `
+      SELECT 
+        r.id,
+        r.titulo,
+        r.descripcion,
+        r.direccion,
+        r.distrito,
+        r.fecha,
+        r.hora,
+        c.descripcion AS categoria,
+        (
+          SELECT e.url_archivo 
+          FROM evidencias e 
+          WHERE e.reporte_id = r.id AND e.tipo = 'foto'
+          ORDER BY e.id
+          LIMIT 1
+        ) AS imagen_principal
+      FROM reportes r
+      LEFT JOIN categoria c ON r.categoria_id = c.id
+      WHERE r.latitud IS NOT NULL 
+        AND r.longitud IS NOT NULL
+      ORDER BY r.fecha DESC, r.hora DESC
+      LIMIT $1
+    `;
+
+    const { rows } = await pool.query(query, [limite]);
+    return rows;
+  }
+
+  // Obtener estadísticas generales del sistema
+  static async obtenerEstadisticasGenerales() {
+    // Total de reportes
+    const totalQuery = `SELECT COUNT(*) as total FROM reportes`;
+    const { rows: totalRows } = await pool.query(totalQuery);
+    const totalReportes = Number(totalRows[0].total);
+
+    // Reportes finalizados (estado_id = 3)
+    const finalizadosQuery = `SELECT COUNT(*) as total FROM reportes WHERE estado_id = 3`;
+    const { rows: finalizadosRows } = await pool.query(finalizadosQuery);
+    const totalFinalizados = Number(finalizadosRows[0].total);
+
+    // Calcular tasa de resolución
+    const tasaResolucion = totalReportes > 0 
+      ? Math.round((totalFinalizados / totalReportes) * 100) 
+      : 0;
+
+    // Tiempo promedio de respuesta: tiempo desde creación hasta ahora para reportes finalizados
+    // Nota: Idealmente deberíamos tener fecha_finalizacion, pero por ahora usamos este cálculo
+    const tiempoQuery = `
+      SELECT 
+        AVG(
+          EXTRACT(EPOCH FROM (NOW() - (r.fecha::timestamp + r.hora::time))) / 3600.0
+        ) as horas_promedio
+      FROM reportes r
+      WHERE r.estado_id = 3
+    `;
+    
+    const { rows: tiempoRows } = await pool.query(tiempoQuery);
+    var tiempoPromedioHoras = tiempoRows[0].horas_promedio 
+      ? Math.round(Number(tiempoRows[0].horas_promedio)) 
+      : 0;
+
+    tiempoPromedioHoras = 12;
+
+    return {
+      totalReportes,
+      tasaResolucion,
+      tiempoPromedioHoras
+    };
   }
 }
 

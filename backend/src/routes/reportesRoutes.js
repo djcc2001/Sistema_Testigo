@@ -21,6 +21,12 @@ const handleMulterError = (error, req, res, next) => {
 // RUTA: Listar todos los reportes (público, con paginación)
 router.get('/', reportesController.listarReportes);
 
+// RUTA: Obtener reportes más recientes para carrusel (público)
+router.get('/recientes', reportesController.obtenerReportesRecientes);
+
+// RUTA: Obtener estadísticas generales (público)
+router.get('/estadisticas/generales', reportesController.obtenerEstadisticasGenerales);
+
 // RUTA: Obtener reportes del usuario autenticado
 router.get('/usuario/mis-reportes', verificarToken, reportesController.obtenerReportesDelUsuario);
 

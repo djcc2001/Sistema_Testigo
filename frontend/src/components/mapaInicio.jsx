@@ -196,7 +196,20 @@ export default function MapaInicio() {
 
                 <div className="info-card">
                   <strong>Fecha</strong>
-                  <span>{reporteSeleccionado.fechaHora || reporteSeleccionado.tiempo}</span>
+                  <span>
+                    {(() => {
+                      // Formatear fecha y hora
+                      if (reporteSeleccionado.fecha && reporteSeleccionado.hora) {
+                        let horaFormateada = reporteSeleccionado.hora;
+                        // Quitar microsegundos si los tiene
+                        if (horaFormateada.includes('.')) {
+                          horaFormateada = horaFormateada.split('.')[0];
+                        }
+                        return `${reporteSeleccionado.fecha} ${horaFormateada}`;
+                      }
+                      return reporteSeleccionado.fechaHora || reporteSeleccionado.tiempo || "Fecha no disponible";
+                    })()}
+                  </span>
                 </div>
 
                 <div className="info-card">

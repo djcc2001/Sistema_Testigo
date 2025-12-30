@@ -116,8 +116,42 @@ export default function ModalDetallesAutoridad({ open, onClose, reporte }) {
               </MapContainer>
             </div>
 
-            <p><strong>Fecha del reporte:</strong> {reporte.fecha}</p>
-            <p><strong>Tiempo transcurrido:</strong> 2 días</p>
+            <p><strong>Fecha del reporte:</strong> {
+              reporte.fecha && reporte.hora 
+                ? `${reporte.fecha} ${reporte.hora.includes('.') ? reporte.hora.split('.')[0] : reporte.hora}`
+                : reporte.fecha || "Fecha no disponible"
+            }</p>
+            <p><strong>Tiempo transcurrido:</strong> {
+              (() => {
+                if (reporte.fecha && reporte.hora) {
+                  try {
+                    let horaFormateada = reporte.hora;
+                    if (horaFormateada.includes('.')) {
+                      horaFormateada = horaFormateada.split('.')[0];
+                    }
+                    const fechaHora = new Date(`${reporte.fecha}T${horaFormateada}`);
+                    if (!isNaN(fechaHora.getTime())) {
+                      const ahora = new Date();
+                      const diferenciaMs = ahora - fechaHora;
+                      if (diferenciaMs > 0) {
+                        const diferenciaDias = Math.floor(diferenciaMs / 86400000);
+                        const diferenciaHoras = Math.floor((diferenciaMs % 86400000) / 3600000);
+                        if (diferenciaDias > 0) {
+                          return `${diferenciaDias} día${diferenciaDias > 1 ? 's' : ''}`;
+                        } else if (diferenciaHoras > 0) {
+                          return `${diferenciaHoras} hora${diferenciaHoras > 1 ? 's' : ''}`;
+                        } else {
+                          return "Menos de 1 hora";
+                        }
+                      }
+                    }
+                  } catch (error) {
+                    console.error("Error al calcular tiempo:", error);
+                  }
+                }
+                return "No disponible";
+              })()
+            }</p>
           </div>
 
           {/* Información del ciudadano */}
