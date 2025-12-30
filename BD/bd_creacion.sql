@@ -67,4 +67,16 @@ VALUES
 (1, 'Nuevo'),
 (2, 'En revisión'),
 (3, 'Finalizado'),
-(4, 'Rechazado');
+(4, 'Archivado');
+
+-- Agregar valores por defecto
+INSERT INTO  categoria   
+VALUES 
+(1, 'Congestión y fluidez vehicular'),
+(2, 'Seguridad vial y accidentes'),
+(3, 'Infraestructura vial'),
+(4, 'Movilidad peatonal y no motorizada')
+(5, 'Transporte público'),
+(6, 'Regulación y fiscalización'),
+(7, 'Impacto ambiental'),
+(8, 'Otros');
