@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getInstituciones } from "../services/usuariosService";
+import { getInstituciones, eliminarUsuario } from "../services/usuariosService";
 import PlantillaAdmin from "../components/PlantillaAdmin";
 import "../style/InstitucionesColaboradoras.css";
 
@@ -33,6 +33,22 @@ const ListarInstituciones = () => {
     (i.nombres || "").toLowerCase().includes(busqueda.toLowerCase()) ||
     (i.correo || "").toLowerCase().includes(busqueda.toLowerCase())
   );
+
+  const handleEliminar = async (id) => {
+    const confirmar = window.confirm(
+      "¿Estás seguro de eliminar esta institución?"
+    );
+
+    if (!confirmar) return;
+
+    try {
+      await eliminarUsuario(id);
+      setInstituciones((prev) => prev.filter((i) => i.id !== id));
+    } catch (error) {
+      alert("No se pudo eliminar la institución");
+    }
+  };
+
 
   return (
     <PlantillaAdmin tituloHeader="Instituciones">
@@ -85,7 +101,13 @@ const ListarInstituciones = () => {
                   </span>
                 </td>
                 <td>
-                  <span className="eliminar">❌</span>
+                  <button
+                    className="btn-eliminar"
+                    onClick={() => handleEliminar(inst.id)}
+                    title="Eliminar usuario"
+                  >
+                    ❌
+                  </button>
                 </td>
               </tr>
             ))}
