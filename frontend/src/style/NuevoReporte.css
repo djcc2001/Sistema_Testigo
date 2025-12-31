@@ -188,7 +188,7 @@ textarea {
 }
 
 /* ============================= */
-/* 📱 TABLET (≤ 1024px) */
+/* TABLET (≤ 1024px) */
 /* ============================= */
 @media (max-width: 1024px) {
   .formulario-reporte {
@@ -209,7 +209,7 @@ textarea {
 }
 
 /* ============================= */
-/* 📱 MÓVIL (≤ 768px) */
+/* MÓVIL (≤ 768px) */
 /* ============================= */
 @media (max-width: 768px) {
   .formulario-reporte {
@@ -267,7 +267,7 @@ textarea {
 }
 
 /* ============================= */
-/* 📱 MÓVIL PEQUEÑO (≤ 480px) */
+/* MÓVIL PEQUEÑO (≤ 480px) */
 /* ============================= */
 @media (max-width: 480px) {
   .mapa {

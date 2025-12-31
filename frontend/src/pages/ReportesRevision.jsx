@@ -1,88 +1,35 @@
 // ReportesRevision.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MapPin, Building2, CalendarDays, Eye } from "lucide-react";
+import { obtenerReportesEnRevision } from "../services/api";
 import PlantillaAutoridad from "../components/PlantillaAutoridad";
 import ModalDetallesAutoridad from "../components/ModalDetallesAutoridad";
 import "../style/MisReportes.css";
 
 const ReportesRevision = () => {
-  // ---------------------------
-  // ESTADO DE BÚSQUEDA
-  // ---------------------------
   const [busqueda, setBusqueda] = useState("");
-
-  // ---------------------------
-  // ESTADO DEL MODAL
-  // ---------------------------
+  const [reportes, setReportes] = useState([]);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [reporteSeleccionado, setReporteSeleccionado] = useState(null);
 
   // ---------------------------
-  // REPORTES
+  // CARGAR REPORTES (estado_id = 2)
   // ---------------------------
-  const reportes = [
-    {
-      id: 1,
-      titulo: "Problema Urbano 1",
-      direccion: "Jr. Manco Capac 123",
-      entidad: "Sin Asignar",
-      fecha: "Set 07, 2025",
-      estado: "En Revisión",
-      imagen: "/baches.jpg",
-      evidencias: ["/baches.jpg", "/auto.jpg"],
-    },
-    {
-      id: 2,
-      titulo: "Problema Urbano 2",
-      direccion: "APV Pillao Matao",
-      entidad: "Sin Asignar",
-      fecha: "Set 05, 2025",
-      estado: "En Revisión",
-      imagen: "/baches.jpg",
-      evidencias: ["/baches.jpg", "/auto.jpg"],
-    },
-    {
-      id: 3,
-      titulo: "Problema Urbano 3",
-      direccion: "Calle Mollecito 21",
-      entidad: "Municipalidad de San Sebastian",
-      fecha: "Jul 27, 2025",
-      estado: "En Revisión",
-      imagen: "/baches.jpg",
-      evidencias: ["/baches.jpg", "/auto.jpg"],
-    },
-  ];
+  useEffect(() => {
+    const cargarReportes = async () => {
+      try {
+        const res = await obtenerReportesEnRevision(busqueda);
+        setReportes(res.data.reportes || []);
+      } catch (error) {
+        console.error("Error cargando reportes en revisión", error);
+      }
+    };
+
+    cargarReportes();
+  }, [busqueda]);
 
   // ---------------------------
-  // FILTRO DINÁMICO
-  // ---------------------------
-  const reportesFiltrados = reportes.filter((r) => {
-    const texto = busqueda.toLowerCase();
-    return (
-      r.titulo.toLowerCase().includes(texto) ||
-      r.direccion.toLowerCase().includes(texto) ||
-      r.entidad.toLowerCase().includes(texto)
-    );
-  });
-
-  // ---------------------------
-  // COLORES POR ESTADO
-  // ---------------------------
-  const getEstadoClase = (estado) => {
-    switch (estado) {
-      case "Enviado":
-        return "estado enviado";
-      case "En Revisión":
-        return "estado revision";
-      case "Resuelto":
-        return "estado resuelto";
-      default:
-        return "estado";
-    }
-  };
-
-  // ---------------------------
-  // FUNCIÓN ABRIR MODAL
+  // VER DETALLES
   // ---------------------------
   const handleVerDetalles = (reporte) => {
     setReporteSeleccionado(reporte);
@@ -104,38 +51,71 @@ const ReportesRevision = () => {
 
       {/* Lista de reportes */}
       <div className="mis-reportes">
-        {reportesFiltrados.map((r) => (
-          <div key={r.id} className="reporte-card">
-            <div className="reporte-img">
-              <img src={r.imagen} alt={r.titulo} />
-            </div>
+        {reportes.length > 0 ? (
+          reportes.map((r) => {
+            // ---------------------------
+            // EVIDENCIAS / IMAGEN PRINCIPAL
+            // ---------------------------
+            const evidencias = Array.isArray(r.evidencias)
+              ? r.evidencias.map((e) => e.url || e)
+              : r.evidencias
+              ? [r.evidencias]
+              : [];
 
-            <div className="reporte-info">
-              <h3>{r.titulo}</h3>
-              <p className="info-line">
-                <MapPin size={16} /> {r.direccion}
-              </p>
-              <p className="info-line">
-                <Building2 size={16} /> {r.entidad}
-              </p>
-            </div>
+            const imagenPrincipal =
+              r.imagen_principal || evidencias[0] || "/auto.jpg";
 
-            <div className="reporte-meta">
-              <p className="info-line fecha">
-                <CalendarDays size={16} /> {r.fecha}
-              </p>
-              <span className={getEstadoClase(r.estado)}>{r.estado}</span>
+            return (
+              <div key={r.id} className="reporte-card">
+                <div className="reporte-img">
+                  <img
+                    src={imagenPrincipal}
+                    alt={r.titulo}
+                    onError={(e) => {
+                      e.target.src = "/auto.jpg";
+                    }}
+                  />
+                </div>
 
-              {/* BOTÓN QUE AHORA ABRE EL MODAL */}
-              <button
-                className="btn-detalle"
-                onClick={() => handleVerDetalles(r)}
-              >
-                <Eye size={16} /> Ver Detalles
-              </button>
-            </div>
-          </div>
-        ))}
+                <div className="reporte-info">
+                  <h3>{r.titulo}</h3>
+                  <p className="info-line">
+                    <MapPin size={16} />{" "}
+                    {r.direccion || "Dirección no disponible"}
+                  </p>
+                  <p className="info-line">
+                    <Building2 size={16} /> {r.entidad || "Sin asignar"}
+                  </p>
+                </div>
+
+                <div className="reporte-meta">
+                  <p className="info-line fecha">
+                    <CalendarDays size={16} /> {r.fecha}
+                  </p>
+
+                  {/* Estado fijo: En revisión */}
+                  <span className="estado revision">En revisión</span>
+
+                  <button
+                    className="btn-detalle"
+                    onClick={() =>
+                      handleVerDetalles({
+                        ...r,
+                        evidencias
+                      })
+                    }
+                  >
+                    <Eye size={16} /> Ver Detalles
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <p className="sin-resultados">
+            No se encontraron reportes en revisión.
+          </p>
+        )}
       </div>
 
       {/* MODAL */}

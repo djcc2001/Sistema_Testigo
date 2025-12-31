@@ -162,6 +162,16 @@ export const reportesService = {
         return await api.get(`/reportes/autoridad/reportes${queryString ? '?' + queryString : ''}`);
     },
 
+    // Obtener reportes en revisión (autoridad)
+    obtenerReportesEnRevision: async (busqueda = '') => {
+        const params = new URLSearchParams();
+        params.append('estado_id', '2'); // En revisión
+        if (busqueda) params.append('busqueda', busqueda);
+        params.append('limite', '100');
+
+        return await api.get(`/reportes/autoridad/reportes?${params.toString()}`);
+    },
+
     // Obtener reportes archivados de la autoridad
     obtenerReportesArchivados: async (busqueda = '') => {
         const params = new URLSearchParams();
@@ -184,6 +194,7 @@ export const obtenerEstadisticasCiudadano = reportesService.obtenerEstadisticasC
 export const obtenerResumenAutoridad = reportesService.obtenerResumenAutoridad;
 export const listarReportesAutoridad = reportesService.listarReportesAutoridad;
 export const obtenerReportesArchivados = reportesService.obtenerReportesArchivados;
+export const obtenerReportesEnRevision = reportesService.obtenerReportesEnRevision;
 
 // Exportar funciones individuales para uso directo
 export const login = authService.login;
