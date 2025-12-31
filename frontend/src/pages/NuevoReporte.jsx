@@ -6,6 +6,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-lea
 import 'leaflet/dist/leaflet.css';
 import { MapPin, Search } from 'lucide-react';
 import {crearReporte } from '../services/api';
+import { getCategorias } from '../services/categoriasService';
 
 delete L.Icon.Default.prototype._getIconUrl;
 
@@ -16,12 +17,13 @@ L.Icon.Default.mergeOptions({
 });
 
 // =================== COMPONENTES MAPA ===================
-function LocationMarker({ position, setPosition }) {
+function LocationMarker({ position, obtenerDireccionDesdeMapa }) {
   useMapEvents({
     click(e) {
-      setPosition(e.latlng);
+      obtenerDireccionDesdeMapa(e.latlng.lat, e.latlng.lng);
     },
   });
+
   return position ? <Marker position={position} /> : null;
 }
 
@@ -35,6 +37,8 @@ function MoverMapa({ position }) {
 
 // =================== COMPONENTE PRINCIPAL ===================
 const NuevoReporte = () => {
+  const [categorias, setCategorias] = useState([])
+
   const [formData, setFormData] = useState({
     titulo: '',
     descripcion: '',
@@ -49,6 +53,20 @@ const NuevoReporte = () => {
 
   const [position, setPosition] = useState(null);
   const [cargando, setCargando] = useState(false);
+
+  // cargar categorias desde la base de datos
+  useEffect(() => {
+    const cargarCategorias = async () => {
+      try {
+        const data = await getCategorias();
+        setCategorias(data);
+      } catch (error) {
+        console.error("Error cargando categorías", error);
+      }
+    };
+
+    cargarCategorias();
+  }, []);
 
   // Actualiza latitud/longitud al hacer click en el mapa
   useEffect(() => {
@@ -76,7 +94,13 @@ const NuevoReporte = () => {
 
   // Enviar formulario al backend
   const handleEnviar = async () => {
-  if (!formData.titulo || !formData.descripcion) {
+  if (
+    !formData.titulo.trim() ||
+    !formData.descripcion.trim() ||
+    !formData.categoria ||
+    !position ||
+    formData.archivos.length === 0
+  ) {
     alert("Por favor completa todos los campos obligatorios.");
     return;
   }
@@ -93,7 +117,7 @@ const NuevoReporte = () => {
     data.append("direccion", formData.direccion);
     data.append("distrito", formData.distrito);
     data.append("estado_id", formData.estado_id.toString());
-    data.append("categoria", formData.categoria);
+    data.append("categoria_id", formData.categoria);
 
     // Debug: mostrar valores antes de enviar
     console.log("Valores a enviar:", {
@@ -146,10 +170,50 @@ const NuevoReporte = () => {
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (pos) => {
+        obtenerDireccionDesdeMapa(
+          pos.coords.latitude,
+          pos.coords.longitude
+        );
+      },
       (error) => alert("Error al obtener ubicación: " + error.message)
     );
   };
+
+  const obtenerDireccionDesdeMapa = async (lat, lng) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
+      );
+
+      const data = await response.json();
+
+      const direccion =
+        data.address?.road
+          ? `${data.address.road} ${data.address.house_number || ''}`.trim()
+          : data.display_name || '';
+
+      const distrito =
+        data.address?.suburb ||
+        data.address?.city_district ||
+        data.address?.neighbourhood ||
+        data.address?.city ||
+        '';
+
+      setPosition({ lat, lng });
+
+      setFormData(prev => ({
+        ...prev,
+        latitud: lat,
+        longitud: lng,
+        direccion,
+        distrito,
+      }));
+    } catch (error) {
+      console.error("Error en reverse geocoding:", error);
+    }
+  };
+
 
   // Buscar dirección en Perú
   const buscarDireccion = async () => {
@@ -180,7 +244,7 @@ const NuevoReporte = () => {
       <div className="formulario-reporte">
         <h2 className="titulo-formulario">FORMULARIO REPORTE</h2>
 
-        <label>Título del Problema:</label>
+        <label>Título del Problema: <span className="obligatorio">*</span></label>
         <input
           type="text"
           name="titulo"
@@ -189,7 +253,7 @@ const NuevoReporte = () => {
           placeholder="Ej. Bache en la calle"
         />
 
-        <label>Descripción:</label>
+        <label>Descripción: <span className="obligatorio">*</span></label>
         <textarea
           name="descripcion"
           value={formData.descripcion}
@@ -197,32 +261,21 @@ const NuevoReporte = () => {
           placeholder="Describe el problema detalladamente"
         />
 
-        <label>Categoría:</label>
-        <select name="categoria" value={formData.categoria} onChange={handleChange}>
+        <label>Categoría: <span className="obligatorio">*</span></label>
+        <select
+          name="categoria"
+          value={formData.categoria}
+          onChange={handleChange}
+        >
           <option value="">Seleccione una categoría</option>
-          <option value="Agua">Agua</option>
-          <option value="Alumbrado">Alumbrado</option>
-          <option value="Basura">Basura</option>
-          <option value="Transporte">Transporte</option>
+          {categorias.map(cat => (
+            <option key={cat.id} value={cat.id}>
+              {cat.descripcion}
+            </option>
+          ))}
         </select>
 
-        <label>Ubicación:</label>
-        <div className="mapa">
-          <MapContainer center={position || [-13.517088, -71.978535]} zoom={14}>
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <LocationMarker position={position} setPosition={setPosition} />
-            <MoverMapa position={position} />
-          </MapContainer>
-        </div>
-
-        <button className="btn-ubicacion" onClick={obtenerUbicacionReal}>
-          <MapPin size={20} />
-          Ubicación Real
-        </button>
-
+        <label>Ubicación: <span className="obligatorio">*</span></label>
         <div className="fila-direccion">
           <div>
             <label>Distrito:</label>
@@ -255,8 +308,23 @@ const NuevoReporte = () => {
             </button>
           </div>
         </div>
+        <div className="mapa">
+          <MapContainer center={position || [-13.517088, -71.978535]} zoom={14}>
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <LocationMarker position={position} obtenerDireccionDesdeMapa={obtenerDireccionDesdeMapa} />
+            <MoverMapa position={position} />
+          </MapContainer>
+        </div>
 
-        <label>Adjuntar Archivos:</label>
+        <button className="btn-ubicacion" onClick={obtenerUbicacionReal}>
+          <MapPin size={20} />
+          Ubicación Real
+        </button>
+
+        <label>Adjuntar Archivos: <span className="obligatorio">*</span></label>
         <div className="boton_subir">
           <input
             type="file"

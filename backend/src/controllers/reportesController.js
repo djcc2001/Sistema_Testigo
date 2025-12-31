@@ -25,15 +25,15 @@ exports.crearReporte = async (req, res) => {
       longitud,
       direccion,
       distrito,
-      categoria,
+      categoria_id,
       estado_id = 1,
     } = req.body;
 
     // Validaciones
-    if (!titulo || !descripcion || !categoria || !latitud || !longitud) {
+    if (!titulo || !descripcion || !categoria_id || !latitud || !longitud) {
       return res.status(400).json({
         error: "Faltan campos obligatorios.",
-        detalles: { titulo, descripcion, categoria, latitud, longitud },
+        detalles: { titulo, descripcion, categoria_id, latitud, longitud },
       });
     }
 
@@ -80,7 +80,7 @@ exports.crearReporte = async (req, res) => {
       distrito,
       estado_id,
       ciudadano_id: usuario.id,
-      categoria_descripcion: categoria,
+      categoria_id
     });
 
     console.log(`Reporte creado con ID: ${idReporte}`);
@@ -108,7 +108,7 @@ exports.crearReporte = async (req, res) => {
       evidencias: evidenciasSubidas.length,
       datos: {
         titulo,
-        categoria,
+        categoria_id,
         ubicacion: { latitud, longitud },
         archivos_subidos: evidenciasSubidas.length,
       },

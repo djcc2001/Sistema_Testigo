@@ -17,6 +17,7 @@ const app = express();
 // Middlewares
 app.use(cors());           // Permite solicitudes desde otros dominios
 app.use(express.json());   // Parseo de JSON en el body de las solicitudes
+app.use('/categorias', require('./routes/categorias'));
 
 // Rutas
 const usuariosRoutes = require('./routes/usuariosRoutes');
