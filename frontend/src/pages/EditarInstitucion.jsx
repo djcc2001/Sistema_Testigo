@@ -1,100 +1,217 @@
-import React, { useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import PlantillaAdmin from "../components/PlantillaAdmin";
+import { obtenerUsuarioPorId, actualizarUsuarioPorId } from "../services/usuariosService";
 import "../style/EditarInstitucion.css";
 
 const EditarInstitucion = () => {
-    const { id } = useParams();
+  const { id } = useParams();
+  const navigate = useNavigate();
 
-    const institucionDummy = {
-        id,
-        nombre: "Wade",
-        tipo: "Municipalidad",
-        direccion: "Calle Augusto Tamayo 180",
-        correo: "tim.jennings@example.com",
-        telefono: "999999999",
-        sitioWeb: "ejemplo.com",
-        contrasena: "123456",
-    };
+  const [form, setForm] = useState({
+    nombres: "",
+    correo: "",
+    nro_celular: "",
+    contrasena: "",
+    rol: "",
+  });
 
-    const [form, setForm] = useState(institucionDummy);
-    const [editable, setEditable] = useState({
-        correo: false,
-        telefono: false,
-        sitioWeb: false,
-        contrasena: false,
-    });
+  const [editable, setEditable] = useState({
+    correo: false,
+    nro_celular: false,
+    contrasena: false,
+  });
 
-    const handleChange = (e) => {
+  const [foto, setFoto] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState("");
+
+  // 🔹 Cargar datos de la institución (autoridad)
+  useEffect(() => {
+    const cargarInstitucion = async () => {
+      try {
+        const data = await obtenerUsuarioPorId(id);
+
+        if (data.rol !== "autoridad") {
+          setError("El usuario seleccionado no es una institución");
+          return;
+        }
+
         setForm({
-            ...form,
-            [e.target.name]: e.target.value,
+          nombres: data.nombres,
+          correo: data.correo,
+          nro_celular: data.nro_celular,
+          contrasena: "",
+          rol: data.rol,
         });
+
+        setPreview(data.foto || null);
+      } catch (err) {
+        setError("No se pudo cargar la institución");
+      }
     };
 
-    const toggleEditable = (campo) => {
-        setEditable((prev) => ({ ...prev, [campo]: !prev[campo] }));
-    };
+    cargarInstitucion();
+  }, [id]);
 
-    return (
-        <PlantillaAdmin tituloHeader="Editar Institución">
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
 
-            <div className="editar-inst-container">
+  const toggleEditable = (campo) => {
+    setEditable((prev) => ({ ...prev, [campo]: !prev[campo] }));
+  };
 
-                <div className="inst-foto-col">
-                    <div className="inst-foto"></div>
-                    <label className="inst-btn-subir">
-                        Subir Imagen
-                        <input type="file" accept="image/*" hidden />
-                    </label>
-                </div>
+  const manejarFoto = (e) => {
+    const archivo = e.target.files[0];
+    if (!archivo) return;
+    setFoto(archivo);
+    setPreview(URL.createObjectURL(archivo));
+  };
 
-                <div className="inst-bloque">
-                    <div className="inst-campo">
-                        <label>Nombre:</label>
-                        <input type="text" value={form.nombre} disabled />
-                    </div>
+  const manejarGuardar = async () => {
+    setCargando(true);
+    setError("");
 
-                    <div className="inst-campo">
-                        <label>Tipo de Institución:</label>
-                        <input type="text" value={form.tipo} disabled />
-                    </div>
+    try {
+      const data = new FormData();
+      data.append("correo", form.correo);
+      data.append("nro_celular", form.nro_celular);
 
-                    <div className="inst-campo">
-                        <label>Dirección Física:</label>
-                        <input type="text" value={form.direccion} disabled />
-                    </div>
-                </div>
+      if (form.contrasena) {
+        data.append("contrasena", form.contrasena);
+      }
 
-                <div className="inst-bloque2">
-                    {["correo", "telefono", "sitioWeb", "contrasena"].map((campo) => (
-                        <div className="inst-campo editable" key={campo}>
-                            <label>{campo.charAt(0).toUpperCase() + campo.slice(1)}:</label>
-                            <div className="campo-editable">
-                                <input
-                                    type={campo === "contrasena" ? "password" : campo === "correo" ? "email" : "text"}
-                                    name={campo}
-                                    value={form[campo]}
-                                    onChange={handleChange}
-                                    readOnly={!editable[campo]}
-                                />
-                                <button type="button" onClick={() => toggleEditable(campo)}>
-                                    <img src="/Boton_modificar.png" alt="editar" />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+      if (foto) {
+        data.append("foto", foto);
+      }
 
-                <div className="inst-botones">
-                    <button type="button" className="btn-cancelar">Cancelar</button>
-                    <button type="button" className="btn-guardar">Guardar Cambios</button>
-                </div>
+      await actualizarUsuarioPorId(id, data);
 
+      alert("Institución actualizada correctamente");
+      navigate("/admin/dashboard");
+    } catch (err) {
+      setError("Error al guardar los cambios");
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  return (
+    <PlantillaAdmin tituloHeader="Editar Institución">
+      <div className="editar-inst-container">
+
+        {/* FOTO */}
+        <div className="inst-foto-col">
+          <img
+            src={preview || "/institucion.png"}
+            alt="institución"
+            className="inst-foto"
+          />
+          <label className="inst-btn-subir">
+            Subir Imagen
+            <input type="file" accept="image/*" hidden onChange={manejarFoto} />
+          </label>
+        </div>
+
+        {/* DATOS NO EDITABLES */}
+        <div className="inst-bloque">
+          <div className="inst-campo">
+            <label>Nombre:</label>
+            <input type="text" value={form.nombres} disabled />
+          </div>
+
+          <div className="inst-campo">
+            <label>Rol:</label>
+            <input type="text" value="Autoridad" disabled />
+          </div>
+        </div>
+
+        {/* DATOS EDITABLES */}
+        <div className="inst-bloque2">
+
+          {/* CORREO */}
+          <div className="inst-campo editable">
+            <label>Correo de Contacto:</label>
+            <div className="campo-editable">
+              <input
+                type="email"
+                name="correo"
+                value={form.correo}
+                onChange={handleChange}
+                readOnly={!editable.correo}
+              />
+              <button type="button" onClick={() => toggleEditable("correo")}>
+                <img src="/Boton_modificar.png" alt="editar" />
+              </button>
             </div>
+          </div>
 
-        </PlantillaAdmin>
-    );
+          {/* TELÉFONO */}
+          <div className="inst-campo editable">
+            <label>Teléfono de Contacto:</label>
+            <div className="campo-editable">
+              <input
+                type="text"
+                name="nro_celular"
+                value={form.nro_celular}
+                onChange={handleChange}
+                readOnly={!editable.nro_celular}
+                maxLength={9}
+              />
+              <button type="button" onClick={() => toggleEditable("nro_celular")}>
+                <img src="/Boton_modificar.png" alt="editar" />
+              </button>
+            </div>
+          </div>
+
+          {/* CONTRASEÑA */}
+          <div className="inst-campo editable">
+            <label>Contraseña:</label>
+            <div className="campo-editable">
+              <input
+                type="password"
+                name="contrasena"
+                value={form.contrasena}
+                onChange={handleChange}
+                readOnly={!editable.contrasena}
+              />
+              <button type="button" onClick={() => toggleEditable("contrasena")}>
+                <img src="/Boton_modificar.png" alt="editar" />
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        {error && <div className="mensaje-error">{error}</div>}
+
+        {/* BOTONES */}
+        <div className="inst-botones">
+          <button
+            type="button"
+            className="btn-cancelar"
+            onClick={() => navigate("/admin/dashboard")}
+            disabled={cargando}
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            className="btn-guardar"
+            onClick={manejarGuardar}
+            disabled={cargando}
+          >
+            {cargando ? "Guardando..." : "Guardar Cambios"}
+          </button>
+        </div>
+
+      </div>
+    </PlantillaAdmin>
+  );
 };
 
 export default EditarInstitucion;
