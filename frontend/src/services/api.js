@@ -194,6 +194,10 @@ export const actualizarReporte = async (reporte_id, datos) => {
     return await api.put(`/reportes/${reporte_id}`, datos);
 };
 
+export const obtenerEstadisticasAutoridad = async (fechaInicio = '', fechaFin = '') => {
+    return await api.get(`/reportes/estadisticas/autoridad?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`);
+};
+
 
 
 // Reportes
