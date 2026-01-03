@@ -500,6 +500,55 @@ class ReportesModel {
     const { rows } = await pool.query(query, values);
     return rows[0];
   }
+
+  static async obtenerEstadisticasAutoridad(autoridadId, fechaInicio, fechaFin) {
+    let dateFilter = "";
+    const params = [autoridadId];
+
+    if (fechaInicio && fechaFin) {
+        dateFilter = " AND fecha BETWEEN $2 AND $3 ";
+        params.push(fechaInicio, fechaFin);
+    }
+
+    // 1. Datos por Categoría
+    const catQuery = `
+        SELECT c.descripcion as nombre, COUNT(r.id)::int as valor
+        FROM reportes r
+        JOIN categoria c ON r.categoria_id = c.id
+        WHERE r.autoridad_id = $1 ${dateFilter}
+        GROUP BY c.descripcion`;
+
+    // 2. Datos por Estado
+    const estQuery = `
+        SELECT e.estado as estado, COUNT(r.id)::int as cantidad
+        FROM reportes r
+        JOIN estado_reporte e ON r.estado_id = e.id
+        WHERE r.autoridad_id = $1 ${dateFilter}
+        GROUP BY e.estado`;
+
+    // 3. Evolución temporal (por Año)
+    const tempQuery = `
+    SELECT 
+      TO_CHAR(fecha, 'Mon YYYY') as mes, 
+      COUNT(id)::int as valor,
+      MIN(fecha) as fecha_orden
+    FROM reportes
+    WHERE autoridad_id = $1 ${dateFilter}
+    GROUP BY mes
+    ORDER BY fecha_orden ASC`;
+
+    const [categorias, estados, tiempo] = await Promise.all([
+        pool.query(catQuery, params),
+        pool.query(estQuery, params),
+        pool.query(tempQuery, params)
+    ]);
+
+    return {
+        datosCategoria: categorias.rows,
+        datosEstado: estados.rows,
+        datosTiempo: tiempo.rows.length > 0 ? tiempo.rows : [{ año: 'Sin datos', valor: 0 }]
+    };
+  }
 }
 
 module.exports = ReportesModel;

@@ -381,3 +381,21 @@ exports.actualizarReporte = async (req, res) => {
     res.status(500).json({ ok: false, mensaje: 'Error interno del servidor' });
   }
 };
+
+exports.obtenerEstadisticasAutoridad = async (req, res) => {
+    try {
+        const { id: autoridadId } = req.user;
+        const { fechaInicio, fechaFin } = req.query;
+
+        const estadisticas = await ReportesModel.obtenerEstadisticasAutoridad(
+            autoridadId, 
+            fechaInicio, 
+            fechaFin
+        );
+
+        res.json({ ok: true, estadisticas });
+    } catch (error) {
+        console.error("Error en obtenerEstadisticasAutoridad:", error);
+        res.status(500).json({ ok: false, error: "Error al procesar estadísticas" });
+    }
+};
