@@ -125,11 +125,17 @@ class ReportesModel {
         r.hora,
         er.estado AS estado_nombre,
         c.descripcion AS categoria,
-        (r.autoridad_id IS NOT NULL) AS asignado
+        (r.autoridad_id IS NOT NULL) AS asignado,
+        -- ESTA ES LA PARTE QUE FALTABA:
+        json_agg(
+          json_build_object('url', e.url_archivo, 'tipo', e.tipo)
+        ) FILTER (WHERE e.id IS NOT NULL) AS evidencias
       FROM reportes r
       LEFT JOIN estado_reporte er ON r.estado_id = er.id
       LEFT JOIN categoria c ON r.categoria_id = c.id
+      LEFT JOIN evidencias e ON r.id = e.reporte_id
       WHERE r.ciudadano_id = $1
+      GROUP BY r.id, er.estado, c.descripcion
       ORDER BY r.fecha DESC, r.hora DESC
       LIMIT $2 OFFSET $3
     `;
