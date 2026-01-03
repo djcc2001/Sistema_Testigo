@@ -475,6 +475,25 @@ class ReportesModel {
       total
     };
   }
+
+  // actualizar reporte
+  static async actualizarReporte(id, data) {
+    const { autoridad_id, estado_id, comentario } = data;
+    
+    const query = `
+      UPDATE reportes 
+      SET 
+        autoridad_id = $1, 
+        estado_id = $2, 
+        comentario = $3
+      WHERE id = $4
+      RETURNING *
+    `;
+
+    const values = [autoridad_id, estado_id, comentario, id];
+    const { rows } = await pool.query(query, values);
+    return rows[0];
+  }
 }
 
 module.exports = ReportesModel;

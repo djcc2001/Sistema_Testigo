@@ -27,6 +27,14 @@ router.get('/perfil', verificarToken, usuariosController.obtenerPerfil);
 // Actualizar perfil del usuario autenticado (foto opcional)
 router.put('/perfil', verificarToken, upload.single('foto'), usuariosController.actualizarPerfil);
 
+// Obtener autoridades
+router.get(
+  '/autoridades',
+  verificarToken,
+  permitirRol(['admin', 'autoridad']), 
+  usuariosController.obtenerAutoridades
+);
+
 // Obtener usuario por ID (solo admin)
 router.get('/:id', verificarToken, permitirRol(['admin']), async (req, res, next) => {
   try {

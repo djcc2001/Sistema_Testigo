@@ -45,6 +45,9 @@ router.get('/usuario/mis-reportes', verificarToken, reportesController.obtenerRe
 // RUTA: Obtener detalle de un reporte específico
 router.get('/:id', reportesController.obtenerReportePorId);
 
+// RUTA: Actualizar reporte 
+router.put('/:id', verificarToken, reportesController.actualizarReporte);
+
 // RUTA: Crear reporte
 router.post(
   '/',

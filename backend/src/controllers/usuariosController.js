@@ -208,6 +208,17 @@ const eliminarUsuarioPorId = async (id) => {
   return eliminado;
 };
 
+// Obtener autoridades activas (para el modal)
+const obtenerAutoridades = async (req, res) => {
+  try {
+    const autoridades = await usuariosModel.getAutoridades();
+    res.json({ ok: true, autoridades });
+  } catch (error) {
+    console.error("Error al obtener autoridades:", error);
+    res.status(500).json({ ok: false, mensaje: "Error al obtener autoridades" });
+  }
+};
+
 
 module.exports = {
   listarUsuarios,
@@ -219,5 +230,6 @@ module.exports = {
   obtenerUsuarioPorId,
   actualizarUsuarioPorId,
   listarInstituciones,
-  eliminarUsuarioPorId
+  eliminarUsuarioPorId,
+  obtenerAutoridades
 };

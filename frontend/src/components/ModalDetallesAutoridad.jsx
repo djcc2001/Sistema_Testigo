@@ -1,22 +1,55 @@
-import React, { useState } from "react";
+// ---------------------------
+// IMPORTACIONES
+// ---------------------------
+import React, { useState, useEffect } from "react";
 import "../style/ModalDetallesAutoridad.css";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { obtenerAutoridades, actualizarReporte } from "../services/api";
 
 export default function ModalDetallesAutoridad({ open, onClose, reporte }) {
 
   // ---------------------------
-  // ESTADO PARA EL CARRUSEL
+  // ESTADO DEL CARRUSEL DE IMÁGENES
   // ---------------------------
   const [indexImagen, setIndexImagen] = useState(0);
 
-  // Si el modal no está abierto o no hay reporte → no mostrar
+  // ---------------------------
+  // ESTADOS PARA ASIGNACIÓN Y ACTUALIZACIÓN DEL REPORTE
+  // ---------------------------
+  const [autoridades, setAutoridades] = useState([]);
+  const [asignadoA, setAsignadoA] = useState(reporte?.autoridad || "");
+  const [nuevoEstado, setNuevoEstado] = useState(reporte?.estado || "1");
+  const [comentario, setComentario] = useState("");
+
+  // ---------------------------
+  // CARGAR AUTORIDADES AL ABRIR EL MODAL
+  // ---------------------------
+  useEffect(() => {
+    if (!open) return;
+
+    const fetchAutoridades = async () => {
+      try {
+        const res = await obtenerAutoridades();
+        setAutoridades(res.data.autoridades || []);
+      } catch (err) {
+        console.error("Error al cargar autoridades:", err);
+      }
+    };
+
+    fetchAutoridades();
+  }, [open]);
+
+  // Si el modal no está abierto o no hay reporte, no se renderiza nada
   if (!open || !reporte) return null;
 
-  // Formatear evidencias: pueden ser array de URLs o array de objetos {url, tipo}
+  // ---------------------------
+  // MANEJO DE IMÁGENES (EVIDENCIAS)
+  // ---------------------------
   const imgs = Array.isArray(reporte.evidencias)
     ? reporte.evidencias.map(e => (typeof e === 'string' ? e : e.url || e))
     : [];
+
   const len = imgs.length;
 
   const nextImagen = () => {
@@ -29,20 +62,39 @@ export default function ModalDetallesAutoridad({ open, onClose, reporte }) {
     setIndexImagen((prev) => (prev - 1 + len) % len);
   };
 
+  // ---------------------------
+  // FUNCIÓN PARA ENVIAR ACTUALIZACIONES
+  // ---------------------------
+  const handleEnviar = async () => {
+    try {
+      await actualizarReporte(reporte.id, {
+        asignadoA: asignadoA || null,
+        nuevoEstado,
+        comentario
+      });
+
+      alert("Reporte actualizado correctamente");
+      onClose();
+    } catch (err) {
+      console.error("Error detallado:", err.response?.data || err.message);
+      alert("No se pudo actualizar el reporte: " + (err.response?.data?.mensaje || "Error 400"));
+    }
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-detalle" onClick={(e) => e.stopPropagation()}>
 
-        {/* Header */}
+        {/* CABECERA */}
         <div className="modal-header">
           <h2>Detalles del reporte</h2>
           <button className="cerrar-btn" onClick={onClose}>✕</button>
         </div>
 
-        {/* Contenido principal */}
+        {/* CONTENIDO PRINCIPAL */}
         <div className="modal-content-detalle">
 
-          {/* Bloque principal */}
+          {/* BLOQUE 1: INFORMACIÓN GENERAL Y EVIDENCIAS */}
           <div className="bloque">
             <p><strong>Título del problema:</strong> {reporte.titulo}</p>
             <p><strong>Nro de expediente:</strong> #{reporte.id}</p>
@@ -52,71 +104,38 @@ export default function ModalDetallesAutoridad({ open, onClose, reporte }) {
               {reporte.descripcion || "Sin descripción disponible"}
             </p>
 
-            {/* GALERÍA / CARRUSEL */}
             <div className="evidencias-galeria">
               <h3>Evidencias:</h3>
-
               {len > 0 ? (
                 <div className="galeria">
                   <button className="flecha left" onClick={prevImagen}>‹</button>
-
                   <div className="fila-thumbs">
                     {(() => {
                       const prev = (indexImagen - 1 + len) % len;
                       const next = (indexImagen + 1) % len;
-
                       return (
                         <>
-                          <img
-                            className="thumb left"
-                            src={imgs[prev]}
-                            alt="Evidencia previa"
-                            onClick={() => setIndexImagen(prev)}
-                          />
-
-                          <img
-                            className="thumb center"
-                            src={imgs[indexImagen]}
-                            alt="Evidencia actual"
-                          />
-
-                          <img
-                            className="thumb right"
-                            src={imgs[next]}
-                            alt="Evidencia siguiente"
-                            onClick={() => setIndexImagen(next)}
-                          />
+                          <img className="thumb left" src={imgs[prev]} alt="Evidencia previa" onClick={() => setIndexImagen(prev)} />
+                          <img className="thumb center" src={imgs[indexImagen]} alt="Evidencia actual" />
+                          <img className="thumb right" src={imgs[next]} alt="Evidencia siguiente" onClick={() => setIndexImagen(next)} />
                         </>
                       );
                     })()}
                   </div>
-
                   <button className="flecha right" onClick={nextImagen}>›</button>
                 </div>
-              ) : (
-                <p>No hay imágenes disponibles.</p>
-              )}
+              ) : <p>No hay imágenes disponibles.</p>}
             </div>
-
           </div>
 
-          {/* Detalles del reporte */}
+          {/* BLOQUE 2: DETALLES, MAPA Y TIEMPO */}
           <div className="bloque">
             <h3>Detalles del reporte</h3>
-            
-            {reporte.categoria && (
-              <p><strong>Categoría:</strong> {reporte.categoria}</p>
-            )}
-            <p><strong>Ubicación:</strong> {reporte.direccion || "Ubicación no disponible"}
-              {reporte.distrito && `, ${reporte.distrito}`}
-            </p>
+            {reporte.categoria && <p><strong>Categoría:</strong> {reporte.categoria}</p>}
+            <p><strong>Ubicación:</strong> {reporte.direccion || "Ubicación no disponible"}{reporte.distrito && `, ${reporte.distrito}`}</p>
 
             <div className="mapa-modal">
-              <MapContainer
-                center={[-13.517, -71.978]}
-                zoom={14}
-                style={{ height: "280px", width: "100%" }}
-              >
+              <MapContainer center={[-13.517, -71.978]} zoom={14} style={{ height: "280px", width: "100%" }}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <Marker position={[-13.517, -71.978]} />
               </MapContainer>
@@ -127,86 +146,92 @@ export default function ModalDetallesAutoridad({ open, onClose, reporte }) {
                 ? `${reporte.fecha} ${reporte.hora.includes('.') ? reporte.hora.split('.')[0] : reporte.hora}`
                 : reporte.fecha || "Fecha no disponible"
             }</p>
+            
             <p><strong>Tiempo transcurrido:</strong> {
               (() => {
-                if (reporte.fecha && reporte.hora) {
-                  try {
-                    let horaFormateada = reporte.hora;
-                    if (horaFormateada.includes('.')) {
-                      horaFormateada = horaFormateada.split('.')[0];
-                    }
-                    const fechaHora = new Date(`${reporte.fecha}T${horaFormateada}`);
-                    if (!isNaN(fechaHora.getTime())) {
-                      const ahora = new Date();
-                      const diferenciaMs = ahora - fechaHora;
-                      if (diferenciaMs > 0) {
-                        const diferenciaDias = Math.floor(diferenciaMs / 86400000);
-                        const diferenciaHoras = Math.floor((diferenciaMs % 86400000) / 3600000);
-                        if (diferenciaDias > 0) {
-                          return `${diferenciaDias} día${diferenciaDias > 1 ? 's' : ''}`;
-                        } else if (diferenciaHoras > 0) {
-                          return `${diferenciaHoras} hora${diferenciaHoras > 1 ? 's' : ''}`;
-                        } else {
-                          return "Menos de 1 hora";
-                        }
-                      }
-                    }
-                  } catch (error) {
-                    console.error("Error al calcular tiempo:", error);
-                  }
+                if (!reporte?.fecha || !reporte?.hora) return "No disponible";
+
+                try {
+                  // 1. Extraer solo la fecha YYYY-MM-DD del string ISO
+                  // "2026-01-03T05:00:00.000Z" -> "2026-01-03"
+                  const fechaLimpia = reporte.fecha.split('T')[0];
+                  
+                  // 2. Limpiar la hora de microsegundos
+                  // "13:37:53.184151" -> "13:37:53"
+                  const horaLimpia = reporte.hora.split('.')[0];
+
+                  // 3. Crear el objeto Date combinando ambos
+                  const fechaHora = new Date(`${fechaLimpia}T${horaLimpia}`);
+
+                  if (isNaN(fechaHora.getTime())) return "Formato inválido";
+
+                  const ahora = new Date();
+                  const diferenciaMs = ahora - fechaHora;
+
+                  if (diferenciaMs <= 0) return "Hace un momento";
+
+                  const d = Math.floor(diferenciaMs / 86400000);
+                  const hr = Math.floor((diferenciaMs % 86400000) / 3600000);
+                  const min = Math.floor((diferenciaMs % 3600000) / 60000);
+
+                  if (d > 0) return `${d} día${d > 1 ? 's' : ''}`;
+                  if (hr > 0) return `${hr} hora${hr > 1 ? 's' : ''}`;
+                  if (min > 0) return `${min} minuto${min > 1 ? 's' : ''}`;
+                  
+                  return "Menos de 1 minuto";
+
+                } catch (e) {
+                  console.error("Error en tiempo:", e);
+                  return "Error de cálculo";
                 }
-                return "No disponible";
               })()
             }</p>
           </div>
 
-          {/* Información del ciudadano */}
+          {/* BLOQUE 3: INFORMACIÓN DEL CIUDADANO */}
           <div className="bloque">
             <h3>Información del ciudadano</h3>
-
             {reporte.nombre_ciudadano ? (
               <>
                 <p><strong>Nombre completo:</strong> {reporte.nombre_ciudadano}</p>
-                {reporte.dni_ciudadano && (
-                  <p><strong>DNI:</strong> {reporte.dni_ciudadano}</p>
-                )}
-                {reporte.correo_ciudadano && (
-                  <p><strong>e-mail:</strong> {reporte.correo_ciudadano}</p>
-                )}
-                {reporte.telefono_ciudadano && (
-                  <p><strong>Teléfono:</strong> {reporte.telefono_ciudadano}</p>
-                )}
+                {reporte.dni_ciudadano && <p><strong>DNI:</strong> {reporte.dni_ciudadano}</p>}
+                {reporte.correo_ciudadano && <p><strong>e-mail:</strong> {reporte.correo_ciudadano}</p>}
+                {reporte.telefono_ciudadano && <p><strong>Teléfono:</strong> {reporte.telefono_ciudadano}</p>}
               </>
-            ) : (
-              <p>Información del ciudadano no disponible</p>
-            )}
-
+            ) : <p>Información del ciudadano no disponible</p>}
           </div>
 
-          {/* Acciones */}
+          {/* BLOQUE 4: ACCIONES */}
           <div className="bloque">
             <div className="acciones-row">
               <label>Asignar:</label>
-              <select>
-                <option disabled selected>Seleccione</option>
-                <option>Municipalidad</option>
-                <option>Serenazgo</option>
-                <option>Aguas del Cusco</option>
+              <select value={asignadoA} onChange={(e) => setAsignadoA(e.target.value)}>
+                <option disabled value="">Seleccione</option>
+                {autoridades.map((a) => (
+                  <option key={a.id} value={a.id}>{a.nombre}</option>
+                ))}
               </select>
 
               <label>Cambiar estado:</label>
-              <select>
-                <option>Enviado</option>
-                <option>En revisión</option>
-                <option>Resuelto</option>
+              <select value={nuevoEstado} onChange={(e) => setNuevoEstado(e.target.value)}>
+                <option value="1">Nuevo</option>
+                <option value="2">En revisión</option>
+                <option value="3">Finalizado</option>
+                <option value="4">Archivado</option>
               </select>
             </div>
 
             <label>Enviar comentario:</label>
-            <textarea className="comentario-box"></textarea>
+            <textarea
+              className="comentario-box"
+              value={comentario}
+              onChange={(e) => setComentario(e.target.value)}
+              placeholder="Escriba aquí..."
+            />
 
-            <button className="btn-enviar">Enviar</button>
+            <button className="btn-enviar" onClick={handleEnviar}>Enviar</button>
           </div>
+
         </div>
       </div>
     </div>

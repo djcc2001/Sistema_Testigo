@@ -110,6 +110,22 @@ const eliminarUsuario = async (id) => {
   return result.rowCount > 0;
 };
 
+// Obtener todos los usuarios con rol 'autoridad' activos
+// usuariosModel.js
+const getAutoridades = async () => {
+  const query = `
+    SELECT id, nombres, apellido_paterno, apellido_materno
+    FROM usuarios
+    -- Usamos LOWER para evitar problemas de mayúsculas/minúsculas
+    WHERE LOWER(rol) = 'autoridad' AND LOWER(estado) = 'activo'
+    ORDER BY nombres
+  `;
+  const result = await pool.query(query);
+  return result.rows.map(u => ({
+    id: u.id,
+    nombre: `${u.nombres} ${u.apellido_paterno} ${u.apellido_materno}`.trim()
+  }));
+};
 
 
 module.exports = {
@@ -119,5 +135,6 @@ module.exports = {
   getUsuarioPorId,
   actualizarUsuario,
   getInstitucionesConReportes,
-  eliminarUsuario
+  eliminarUsuario,
+  getAutoridades
 };

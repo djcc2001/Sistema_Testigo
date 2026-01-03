@@ -19,10 +19,12 @@ const verificarToken = (req, res, next) => {
 };
 
 // Middleware para verificar roles específicos
+// Middleware
 const permitirRol = (rolesPermitidos) => {
-  return (req, res, next) => {
-    if (!rolesPermitidos.includes(req.user.rol)) {
-      return res.status(403).json({ error: 'No tienes permiso para acceder a esta ruta' });
+  return (req, res, next) => {    
+    const rolUsuario = req.user?.rol;
+    if (!rolesPermitidos.includes(rolUsuario)) {
+        return res.status(403).json({ mensaje: "No autorizado" });
     }
     next();
   };

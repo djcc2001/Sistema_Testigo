@@ -350,3 +350,34 @@ exports.listarReportesAutoridad = async (req, res) => {
     });
   }
 };
+
+// Actualizar reporte
+exports.actualizarReporte = async (req, res) => {
+  const { id } = req.params;
+  const { asignadoA, nuevoEstado, comentario } = req.body;
+
+  try {
+    // Validamos que el estado sea un número válido
+    const estado_id = parseInt(nuevoEstado);
+    
+    if (isNaN(estado_id)) {
+      return res.status(400).json({ ok: false, mensaje: "Estado no válido" });
+    }
+
+    const reporteActualizado = await ReportesModel.actualizarReporte(id, {
+      autoridad_id: asignadoA || null, // Permitir que sea nulo
+      estado_id: estado_id,
+      comentario: comentario || ""
+    });
+
+    res.json({
+      ok: true,
+      mensaje: 'Reporte actualizado correctamente',
+      reporte: reporteActualizado
+    });
+
+  } catch (error) {
+    console.error('Error en actualizarReporte:', error);
+    res.status(500).json({ ok: false, mensaje: 'Error interno del servidor' });
+  }
+};

@@ -180,8 +180,20 @@ export const reportesService = {
         params.append('limite', '100'); // Límite alto para mostrar todos
         
         return await api.get(`/reportes/autoridad/reportes?${params.toString()}`);
-    }
+    },
+
 };
+
+// Obtener usuarios con rol "autoridad"
+export const obtenerAutoridades = async () => {
+    return await api.get('/usuarios/autoridades'); // suponiendo que tu backend tenga este endpoint
+};
+
+// Actualizar reporte
+export const actualizarReporte = async (reporte_id, datos) => {
+    return await api.put(`/reportes/${reporte_id}`, datos);
+};
+
 
 
 // Reportes
