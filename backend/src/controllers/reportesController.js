@@ -1,6 +1,7 @@
 // reportesController.js
 const cloudinary = require("cloudinary").v2;
 const ReportesModel = require("../models/reportesModel");
+const notificacionesService = require("../services/notificacionesService");
 
 // Configurar Cloudinary
 cloudinary.config({
@@ -364,11 +365,22 @@ exports.actualizarReporte = async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: "Estado no válido" });
     }
 
+    // Obtener estado anterior
+    const reporteAnterior = await ReportesModel.obtenerReportePorId(id);
+
     const reporteActualizado = await ReportesModel.actualizarReporte(id, {
-      autoridad_id: asignadoA || null, // Permitir que sea nulo
+      autoridad_id: asignadoA || null,
       estado_id: estado_id,
       comentario: comentario || ""
     });
+
+    // Notificar SOLO si cambió el estado
+    if (reporteAnterior.estado_id !== estado_id) {
+      await notificacionesService.notificarCambioEstado({
+        reporteId: id,
+        nuevoEstadoId: estado_id
+      });
+    }
 
     res.json({
       ok: true,
