@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { MapPin, Building2, CalendarDays, Eye, User } from "lucide-react";
 import PlantillaAutoridad from "../components/PlantillaAutoridad";
 import ModalDetallesAutoridad from "../components/ModalDetallesAutoridad";
-import { obtenerResumenAutoridad, listarReportesAutoridad } from "../services/api";
+import api, { obtenerResumenAutoridad, listarReportesAutoridad } from "../services/api";
 import "../style/AutoridadHome.css";
 
 const AutoridadHome = () => {
@@ -169,9 +169,14 @@ const AutoridadHome = () => {
 
                   <button
                     className="btn-detalle"
-                    onClick={() => {
-                      setReporteSeleccionado(r);
-                      setModalAbierto(true);
+                    onClick={async () => {
+                      try {
+                        const response = await api.get(`/reportes/${r.id}`);
+                        setReporteSeleccionado(response.data);
+                        setModalAbierto(true);
+                      } catch (error) {
+                        console.error("Error al cargar detalles:", error);
+                      }
                     }}
                   >
                     <Eye size={16} /> Ver Detalles

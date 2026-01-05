@@ -61,6 +61,8 @@ const ReportesTotales = () => {
       coincideEstado = r.estado_nombre === "En revisión";
     } else if (filtroEstado === "resuelto") {
       coincideEstado = r.estado_nombre === "Finalizado";
+    } else if (filtroEstado === "archivado") {
+      coincideEstado = r.estado_nombre === "Archivado";
     }
 
     return coincideBusqueda && coincideEstado;
@@ -74,9 +76,14 @@ const ReportesTotales = () => {
   };
 
   // Función para abrir modal con detalles del reporte
-  const handleVerDetalles = (reporte) => {
-    setReporteSeleccionado(reporte);
-    setModalAbierto(true);
+  const handleVerDetalles = async (reporte) => {
+    try {
+      const response = await api.get(`/reportes/${reporte.id}`);
+      setReporteSeleccionado(response.data);
+      setModalAbierto(true);
+    } catch (error) {
+      console.error("Error al cargar detalles del reporte:", error);
+    }
   };
 
   // Cerrar modal y recargar

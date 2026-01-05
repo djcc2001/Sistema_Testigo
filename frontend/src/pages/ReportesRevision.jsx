@@ -1,7 +1,7 @@
 // ReportesRevision.jsx
 import { useState, useEffect } from "react";
 import { MapPin, Building2, CalendarDays, Eye } from "lucide-react";
-import { obtenerReportesEnRevision } from "../services/api";
+import api, { obtenerReportesEnRevision } from "../services/api";
 import PlantillaAutoridad from "../components/PlantillaAutoridad";
 import ModalDetallesAutoridad from "../components/ModalDetallesAutoridad";
 import "../style/MisReportes.css";
@@ -31,9 +31,14 @@ const ReportesRevision = () => {
   // ---------------------------
   // VER DETALLES
   // ---------------------------
-  const handleVerDetalles = (reporte) => {
-    setReporteSeleccionado(reporte);
-    setModalAbierto(true);
+  const handleVerDetalles = async (reporte) => {
+    try {
+      const response = await api.get(`/reportes/${reporte.id}`);
+      setReporteSeleccionado(response.data);
+      setModalAbierto(true);
+    } catch (error) {
+      console.error("Error al cargar detalles del reporte:", error);
+    }
   };
 
   return (

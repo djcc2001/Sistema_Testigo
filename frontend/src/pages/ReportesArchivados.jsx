@@ -1,9 +1,9 @@
 // ReportesArchivados.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { MapPin, Building2, CalendarDays, Eye, User } from "lucide-react";
 import PlantillaAutoridad from "../components/PlantillaAutoridad";
 import ModalDetallesAutoridad from "../components/ModalDetallesAutoridad";
-import { obtenerReportesArchivados } from "../services/api";
+import api, { obtenerReportesArchivados } from "../services/api";
 
 const ReportesArchivados = () => {
   // ---------------------------
@@ -18,11 +18,7 @@ const ReportesArchivados = () => {
   // ---------------------------
   // CARGAR DATOS
   // ---------------------------
-  useEffect(() => {
-    cargarReportesArchivados();
-  }, [busqueda]);
-
-  const cargarReportesArchivados = async () => {
+  const cargarReportesArchivados = useCallback(async () => {
     try {
       setCargando(true);
       const response = await obtenerReportesArchivados(busqueda);
@@ -35,7 +31,11 @@ const ReportesArchivados = () => {
     } finally {
       setCargando(false);
     }
-  };
+  }, [busqueda]);
+
+  useEffect(() => {
+    cargarReportesArchivados();
+  }, [cargarReportesArchivados]);
 
   // ---------------------------
   // FUNCIONES AUXILIARES
@@ -63,9 +63,14 @@ const ReportesArchivados = () => {
     }
   };
 
-  const handleVerDetalles = (reporte) => {
-    setReporteSeleccionado(reporte);
-    setModalAbierto(true);
+  const handleVerDetalles = async (reporte) => {
+    try {
+      const response = await api.get(`/reportes/${reporte.id}`);
+      setReporteSeleccionado(response.data);
+      setModalAbierto(true);
+    } catch (error) {
+      console.error("Error al cargar detalles del reporte:", error);
+    }
   };
 
   return (

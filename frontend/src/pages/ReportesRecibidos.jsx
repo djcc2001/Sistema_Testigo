@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { MapPin, Building2, CalendarDays, Eye, Loader2 } from "lucide-react";
 import PlantillaAutoridad from "../components/PlantillaAutoridad";
 import ModalDetallesAutoridad from "../components/ModalDetallesAutoridad";
-import { listarReportesAutoridad } from "../services/api";
+import api, { listarReportesAutoridad } from "../services/api";
 import "../style/ReportesRecibidos.css";
 
 
@@ -105,9 +105,16 @@ const ReportesRecibidos = () => {
   // ---------------------------
   // FUNCIÓN ABRIR MODAL
   // ---------------------------
-  const handleVerDetalles = (reporte) => {
-    setReporteSeleccionado(reporte);
-    setModalAbierto(true);
+  const handleVerDetalles = async (reporte) => {
+    try {
+      // Obtener detalles completos del reporte desde el backend
+      const response = await api.get(`/reportes/${reporte.id}`);
+      setReporteSeleccionado(response.data);
+      setModalAbierto(true);
+    } catch (err) {
+      console.error("Error al cargar detalles del reporte:", err);
+      alert("No se pudieron cargar los detalles del reporte");
+    }
   };
 
   // ---------------------------

@@ -205,11 +205,11 @@ export default function ModalDetallesAutoridad({ open, onClose, reporte }) {
           {/* BLOQUE 3: INFORMACIÓN DEL CIUDADANO Y ESTADO */}
           <div className="bloque">
             <h3>Información del ciudadano</h3>
-            {reporte.nombre_ciudadano ? (
+            {reporte.ciudadano_nombre ? (
               <>
-                <p><strong>Nombre completo:</strong> {reporte.nombre_ciudadano}</p>
+                <p><strong>Nombre completo:</strong> {`${reporte.ciudadano_nombre || ''} ${reporte.ciudadano_apellido_paterno || ''} ${reporte.ciudadano_apellido_materno || ''}`.trim()}</p>
                 {reporte.dni_ciudadano && <p><strong>DNI:</strong> {reporte.dni_ciudadano}</p>}
-                {reporte.correo_ciudadano && <p><strong>e-mail:</strong> {reporte.correo_ciudadano}</p>}
+                {reporte.ciudadano_correo && <p><strong>e-mail:</strong> {reporte.ciudadano_correo}</p>}
                 {reporte.telefono_ciudadano && <p><strong>Teléfono:</strong> {reporte.telefono_ciudadano}</p>}
               </>
             ) : <p>Información del ciudadano no disponible</p>}
@@ -218,11 +218,16 @@ export default function ModalDetallesAutoridad({ open, onClose, reporte }) {
             
             <h3>Estado actual del reporte</h3>
             <p><strong>Estado:</strong> {reporte.estado_nombre || "Sin estado"}</p>
-            {reporte.autoridad_id && (
-              <p><strong>Asignado a:</strong> {autoridades.find(a => a.id === reporte.autoridad_id)?.nombre || `Autoridad ID: ${reporte.autoridad_id}`}</p>
+            {reporte.autoridad_id && reporte.autoridad_nombre ? (
+              <p><strong>Asignado a:</strong> {reporte.autoridad_nombre}</p>
+            ) : (
+              <p><strong>Asignado a:</strong> No asignado</p>
             )}
             {reporte.comentario && (
-              <p><strong>Comentario anterior:</strong> {reporte.comentario}</p>
+              <>
+                <p><strong>Comentario:</strong></p>
+                <p style={{marginLeft: "10px", color: "#555"}}>{reporte.comentario}</p>
+              </>
             )}
           </div>
 

@@ -192,7 +192,6 @@ exports.obtenerReportesDelUsuario = async (req, res) => {
 exports.obtenerReportePorId = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(`Obteniendo detalle del reporte ID: ${id}`);
 
     const reporte = await ReportesModel.obtenerReportePorId(id);
 
@@ -200,7 +199,6 @@ exports.obtenerReportePorId = async (req, res) => {
       return res.status(404).json({ error: "Reporte no encontrado" });
     }
 
-    console.log(`Reporte encontrado con ${reporte.evidencias.length} evidencias`);
     res.json(reporte);
   } catch (error) {
     console.error("Error al obtener reporte:", error);

@@ -67,7 +67,7 @@ class ReportesModel {
     const countQuery = `
       SELECT COUNT(*) 
       FROM reportes 
-      WHERE estado_id IN (1,2,3)
+      WHERE estado_id IN (1,2,3,4)
         AND latitud IS NOT NULL 
         AND longitud IS NOT NULL
     `;
@@ -95,7 +95,7 @@ class ReportesModel {
       LEFT JOIN estado_reporte er ON r.estado_id = er.id
       LEFT JOIN categoria c ON r.categoria_id = c.id
       LEFT JOIN evidencias e ON r.id = e.reporte_id
-      WHERE r.estado_id IN (1,2,3)
+      WHERE r.estado_id IN (1,2,3,4)
         AND r.latitud IS NOT NULL 
         AND r.longitud IS NOT NULL
       GROUP BY r.id, er.estado, c.descripcion
@@ -150,7 +150,10 @@ class ReportesModel {
         r.*,
         er.estado AS estado_nombre,
         c.descripcion AS categoria,
+        uc.dni AS dni_ciudadano,
         uc.nombres AS ciudadano_nombre,
+        uc.apellido_paterno AS ciudadano_apellido_paterno,
+        uc.apellido_materno AS ciudadano_apellido_materno,
         uc.correo AS ciudadano_correo,
         ua.id AS autoridad_id,
         ua.nombres AS autoridad_nombre,
@@ -169,7 +172,7 @@ class ReportesModel {
     if (!rows.length) return null;
 
     const evidenciasQuery = `
-      SELECT url_archivo, tipo 
+      SELECT url_archivo AS url, tipo 
       FROM evidencias 
       WHERE reporte_id = $1
       ORDER BY id
