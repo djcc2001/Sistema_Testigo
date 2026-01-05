@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MapPin, User, CalendarDays, Eye, Bell, Clock, CheckCircle } from "lucide-react";
+import { MapPin, User, CalendarDays, Eye, Bell, Clock, CheckCircle, Archive } from "lucide-react";
 import PlantillaAdmin from "../components/PlantillaAdmin";
 import ModalDetallesAutoridad from "../components/ModalDetallesAutoridad";
 import api from "../services/api";
@@ -46,6 +46,7 @@ const ReportesTotales = () => {
   const recibidos = reportes.filter(r => r.estado_nombre === "Nuevo").length;
   const pendientes = reportes.filter(r => r.estado_nombre === "En revisión").length;
   const resueltos = reportes.filter(r => r.estado_nombre === "Finalizado").length;
+  const archivados = reportes.filter(r => r.estado_nombre === "Archivado").length;
 
   // Filtrado dinámico
   const reportesFiltrados = reportes.filter((r) => {
@@ -127,6 +128,16 @@ const ReportesTotales = () => {
               <p className="numero-resumen">{resueltos}</p>
             </div>
           </div>
+
+          <div className="card-resumen archivados">
+            <div className="icono-resumen">
+              <Archive size={32} />
+            </div>
+            <div className="info-resumen">
+              <h3>Archivados</h3>
+              <p className="numero-resumen">{archivados}</p>
+            </div>
+          </div>
         </div>
 
         {/* Sección de búsqueda y filtros */}
@@ -152,6 +163,7 @@ const ReportesTotales = () => {
               <option value="recibido">Recibidos</option>
               <option value="pendiente">Pendientes</option>
               <option value="resuelto">Resueltos</option>
+              <option value="archivado">Archivados</option>
             </select>
           </div>
         </div>
