@@ -41,7 +41,7 @@ export default function DetalleReporte() {
             lat: parseFloat(data.latitud) || -13.517088, 
             lng: parseFloat(data.longitud) || -71.978535 
           },
-          evidenciasCiudadano: data.evidencias?.map(e => e.url_archivo) || ["/auto.jpg"],
+          evidenciasCiudadano: data.evidencias?.map(e => e.url) || ["/auto.jpg"],
           institucion: data.autoridad_id ? {
             nombre: data.autoridad_nombre || "Sin nombre",
             contacto: `${data.autoridad_correo || "Sin correo"}${data.autoridad_telefono ? ` / +51 ${data.autoridad_telefono}` : ""}`,
