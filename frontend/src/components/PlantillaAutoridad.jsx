@@ -37,9 +37,19 @@ const LayoutPrincipal = ({ children, tituloHeader = "Dashboard" }) => {
       {/* Sidebar */}
       <aside className={`sidebar ${menuAbierto ? 'active' : ''}`}>
         <div className="perfil">
-          {/* Foto del usuario, usa ruta por defecto si no hay foto */}
-          <p>BIENVENIDO:</p>
-          <p>{usuario?.nombres || 'Administrador'}</p>
+          {/* Foto del usuario */}
+          <div className="foto-usuario">
+            <img 
+              src={usuario?.foto || "/usuario.png"} 
+              alt="Foto de perfil"
+              onError={(e) => {
+                e.target.src = "/usuario.png";
+              }}
+            />
+          </div>
+          <p className="titulo-bienvenida">BIENVENIDO(A)</p>
+          <p className="nombre-usuario">{usuario?.nombres || 'Autoridad'}</p>
+          <span className="rol-usuario">{usuario?.correo || ''}</span>
         </div>
 
         {/* Menú de navegación */}

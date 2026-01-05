@@ -18,8 +18,8 @@ export default function ModalDetallesAutoridad({ open, onClose, reporte }) {
   // ESTADOS PARA ASIGNACIÓN Y ACTUALIZACIÓN DEL REPORTE
   // ---------------------------
   const [autoridades, setAutoridades] = useState([]);
-  const [asignadoA, setAsignadoA] = useState(reporte?.autoridad || "");
-  const [nuevoEstado, setNuevoEstado] = useState(reporte?.estado || "1");
+  const [asignadoA, setAsignadoA] = useState("");
+  const [nuevoEstado, setNuevoEstado] = useState("1");
   const [comentario, setComentario] = useState("");
 
   // ---------------------------
@@ -39,6 +39,20 @@ export default function ModalDetallesAutoridad({ open, onClose, reporte }) {
 
     fetchAutoridades();
   }, [open]);
+
+  // ---------------------------
+  // ACTUALIZAR ESTADOS CUANDO CAMBIA EL REPORTE
+  // ---------------------------
+  useEffect(() => {
+    if (reporte) {
+      // Establecer autoridad asignada (puede ser null o un ID)
+      setAsignadoA(reporte.autoridad_id || "");
+      // Establecer estado actual del reporte
+      setNuevoEstado(reporte.estado_id?.toString() || "1");
+      // Establecer comentario si existe
+      setComentario(reporte.comentario || "");
+    }
+  }, [reporte]);
 
   // Si el modal no está abierto o no hay reporte, no se renderiza nada
   if (!open || !reporte) return null;
@@ -188,7 +202,7 @@ export default function ModalDetallesAutoridad({ open, onClose, reporte }) {
             }</p>
           </div>
 
-          {/* BLOQUE 3: INFORMACIÓN DEL CIUDADANO */}
+          {/* BLOQUE 3: INFORMACIÓN DEL CIUDADANO Y ESTADO */}
           <div className="bloque">
             <h3>Información del ciudadano</h3>
             {reporte.nombre_ciudadano ? (
@@ -199,6 +213,17 @@ export default function ModalDetallesAutoridad({ open, onClose, reporte }) {
                 {reporte.telefono_ciudadano && <p><strong>Teléfono:</strong> {reporte.telefono_ciudadano}</p>}
               </>
             ) : <p>Información del ciudadano no disponible</p>}
+            
+            <hr style={{margin: "15px 0", borderColor: "#ddd"}} />
+            
+            <h3>Estado actual del reporte</h3>
+            <p><strong>Estado:</strong> {reporte.estado_nombre || "Sin estado"}</p>
+            {reporte.autoridad_id && (
+              <p><strong>Asignado a:</strong> {autoridades.find(a => a.id === reporte.autoridad_id)?.nombre || `Autoridad ID: ${reporte.autoridad_id}`}</p>
+            )}
+            {reporte.comentario && (
+              <p><strong>Comentario anterior:</strong> {reporte.comentario}</p>
+            )}
           </div>
 
           {/* BLOQUE 4: ACCIONES */}

@@ -42,9 +42,10 @@ export default function DetalleReporte() {
             lng: parseFloat(data.longitud) || -71.978535 
           },
           evidenciasCiudadano: data.evidencias?.map(e => e.url_archivo) || ["/auto.jpg"],
-          institucion: data.autoridad_nombre ? {
-            nombre: data.autoridad_nombre,
-            contacto: `${data.autoridad_contacto || "Sin correo"} ${data.autoridad_telefono ? `/ +51 ${data.autoridad_telefono}` : ""}`,
+          institucion: data.autoridad_id ? {
+            nombre: data.autoridad_nombre || "Sin nombre",
+            contacto: `${data.autoridad_correo || "Sin correo"}${data.autoridad_telefono ? ` / +51 ${data.autoridad_telefono}` : ""}`,
+            foto: data.autoridad_foto || "/usuario.png",
             evidenciasResolucion: []
           } : null,
           ciudadanoId: data.ciudadano_id,
@@ -95,15 +96,29 @@ export default function DetalleReporte() {
   const institucion = reporte.institucion || {
     nombre: "Pendiente de asignación",
     contacto: "Sin información de contacto",
+    foto: "/usuario.png",
     evidenciasResolucion: []
   };
 
-  // El botón "Cancelar" es simulación por ahora
-  const cancelarReporte = () => {
+  // Cancelar reporte - cambia el estado a Archivado (estado_id = 4)
+  const cancelarReporte = async () => {
     const ok = window.confirm("¿Confirma que desea cancelar este reporte?");
     if (!ok) return;
-    setReporte((prev) => ({ ...prev, estado: "Cancelado" }));
-    alert("Reporte cancelado (simulado).");
+    
+    try {
+      // Cambiar el estado a 4 (Archivado) - usar nuevoEstado en lugar de estado_id
+      await api.put(`/reportes/${id}`, {
+        nuevoEstado: 4,
+        comentario: "Reporte cancelado por el ciudadano"
+      });
+      
+      // Actualizar el estado local
+      setReporte((prev) => ({ ...prev, estado: "Archivado" }));
+      alert("Reporte cancelado exitosamente.");
+    } catch (err) {
+      console.error("Error al cancelar reporte:", err);
+      alert("No se pudo cancelar el reporte. Por favor, intenta nuevamente.");
+    }
   };
 
   const prevImagen = () => {
@@ -208,7 +223,13 @@ export default function DetalleReporte() {
           <h3>Información de la Institución Asignada</h3>
           <div className="institucion-card">
             <div className="institucion-imagen">
-              <img src={institucion.evidenciasResolucion?.[0] || "/Municipalidad-San-Sebastian.png"} alt="institucion" />
+              <img 
+                src={institucion.foto || "/usuario.png"} 
+                alt="Foto de perfil de la institución" 
+                onError={(e) => {
+                  e.target.src = "/usuario.png";
+                }}
+              />
             </div>
             <div className="institucion-detalles">
               <div className="detalle-linea columna">

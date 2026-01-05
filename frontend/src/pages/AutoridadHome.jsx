@@ -1,5 +1,5 @@
 // AutoridadHome.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { MapPin, Building2, CalendarDays, Eye, User } from "lucide-react";
 import PlantillaAutoridad from "../components/PlantillaAutoridad";
 import ModalDetallesAutoridad from "../components/ModalDetallesAutoridad";
@@ -19,11 +19,7 @@ const AutoridadHome = () => {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [reporteSeleccionado, setReporteSeleccionado] = useState(null);
 
-  useEffect(() => {
-    cargarDatos();
-  }, [filtroEstado, busqueda]);
-
-  const cargarDatos = async () => {
+  const cargarDatos = useCallback(async () => {
     try {
       setCargando(true);
 
@@ -47,7 +43,11 @@ const AutoridadHome = () => {
     } finally {
       setCargando(false);
     }
-  };
+  }, [filtroEstado, busqueda]);
+
+  useEffect(() => {
+    cargarDatos();
+  }, [cargarDatos]);
 
   const getEstadoClase = (estado) => {
     const estadoMap = {
@@ -187,7 +187,12 @@ const AutoridadHome = () => {
 
       <ModalDetallesAutoridad
         open={modalAbierto}
-        onClose={() => setModalAbierto(false)}
+        onClose={() => {
+          setModalAbierto(false);
+          setReporteSeleccionado(null);
+          // Recargar datos después de cerrar el modal (por si hubo cambios)
+          cargarDatos();
+        }}
         reporte={reporteSeleccionado}
       />
     </PlantillaAutoridad>

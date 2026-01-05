@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PlantillaAdmin from "../components/PlantillaAdmin";
+import api from "../services/api";
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
@@ -8,91 +9,49 @@ import { Users, FileText, CheckCircle, Clock } from "lucide-react";
 import "../style/EstadisticasAdmin.css";
 
 export default function EstadisticasAdmin() {
-  const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin, setFechaFin] = useState("");
-  const [institucionFiltro, setInstitucionFiltro] = useState("todas");
+  const [cargando, setCargando] = useState(true);
+  const [estadisticas, setEstadisticas] = useState(null);
 
-  // =================== DATOS SIMULADOS (KPIs) ===================
-  const totalUsuarios = 1250;
-  const totalReportes = 3580;
-  const tasaResolucionGlobal = 78.5;
-  const tiempoPromedioGlobal = 5.2;
+  // Cargar estadísticas al montar el componente
+  useEffect(() => {
+    cargarEstadisticas();
+  }, []);
 
-  // =================== CRECIMIENTO DE USUARIOS ===================
-  const datosUsuarios = [
-    { mes: "Ene", ciudadanos: 50, instituciones: 3 },
-    { mes: "Feb", ciudadanos: 80, instituciones: 5 },
-    { mes: "Mar", ciudadanos: 120, instituciones: 7 },
-    { mes: "Abr", ciudadanos: 180, instituciones: 10 },
-    { mes: "May", ciudadanos: 250, instituciones: 12 },
-    { mes: "Jun", ciudadanos: 320, instituciones: 15 },
-    { mes: "Jul", ciudadanos: 400, instituciones: 18 },
-    { mes: "Ago", ciudadanos: 480, instituciones: 20 },
-    { mes: "Sep", ciudadanos: 580, instituciones: 22 },
-  ];
-
-  // =================== VOLUMEN DE REPORTES ===================
-  const datosReportes = [
-    { semana: "Sem 1", reportes: 45 },
-    { semana: "Sem 2", reportes: 60 },
-    { semana: "Sem 3", reportes: 75 },
-    { semana: "Sem 4", reportes: 90 },
-    { semana: "Sem 5", reportes: 85 },
-    { semana: "Sem 6", reportes: 110 },
-    { semana: "Sem 7", reportes: 95 },
-    { semana: "Sem 8", reportes: 120 },
-  ];
-
-  // =================== RANKING DE INSTITUCIONES ===================
-  const rankingInstituciones = [
-    { nombre: "Municipalidad de Cusco", resueltos: 380, tiempoPromedio: 4.2 },
-    { nombre: "Municipalidad San Sebastián", resueltos: 320, tiempoPromedio: 5.8 },
-    { nombre: "Ministerio de Transporte", resueltos: 280, tiempoPromedio: 6.5 },
-    { nombre: "Policía Nacional", resueltos: 250, tiempoPromedio: 4.9 },
-    { nombre: "SEDACUSCO", resueltos: 180, tiempoPromedio: 7.2 },
-  ];
-
-  // =================== DISTRIBUCIÓN POR CATEGORÍA ===================
-  const datosCategorias = [
-    { categoria: "Vías y movilidad", valor: 450 },
-    { categoria: "Alumbrado público", valor: 320 },
-    { categoria: "Limpieza", valor: 280 },
-    { categoria: "Agua y saneamiento", valor: 220 },
-    { categoria: "Otros", valor: 180 },
-  ];
-
-  const colores = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#a770ef"];
-
-  const aplicarFiltros = () => {
-    console.log("Filtros aplicados:", { fechaInicio, fechaFin, institucionFiltro });
-    // Aquí iría la lógica para filtrar datos desde el backend
+  const cargarEstadisticas = async () => {
+    try {
+      setCargando(true);
+      const response = await api.get('/reportes/estadisticas/admin');
+      
+      if (response.data && response.data.estadisticas) {
+        setEstadisticas(response.data.estadisticas);
+      }
+    } catch (error) {
+      console.error('Error al cargar estadísticas:', error);
+      alert('Error al cargar las estadísticas');
+    } finally {
+      setCargando(false);
+    }
   };
+
+  // Mostrar loading
+  if (cargando || !estadisticas) {
+    return (
+      <PlantillaAdmin tituloHeader="Estadísticas del Sistema">
+        <div className="estadisticas-admin-container">
+          <div style={{ textAlign: 'center', padding: '50px' }}>
+            Cargando estadísticas...
+          </div>
+        </div>
+      </PlantillaAdmin>
+    );
+  }
+
+  const { kpis, crecimientoUsuarios, volumenReportes, rankingInstituciones, distribucionCategorias } = estadisticas;
+  const colores = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#a770ef", "#c771ef"];
 
   return (
     <PlantillaAdmin tituloHeader="Estadísticas del Sistema">
       <div className="estadisticas-admin-container">
-        
-        {/* =================== FILTROS =================== */}
-        <div className="filtros-admin">
-          <div className="filtro-grupo">
-            <label>Fecha Inicio</label>
-            <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
-          </div>
-          <div className="filtro-grupo">
-            <label>Fecha Fin</label>
-            <input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
-          </div>
-          <div className="filtro-grupo">
-            <label>Institución</label>
-            <select value={institucionFiltro} onChange={(e) => setInstitucionFiltro(e.target.value)}>
-              <option value="todas">Todas</option>
-              <option value="muni-cusco">Municipalidad de Cusco</option>
-              <option value="muni-san-sebastian">Municipalidad San Sebastián</option>
-              <option value="min-transporte">Ministerio de Transporte</option>
-            </select>
-          </div>
-          <button className="btn-filtrar-admin" onClick={aplicarFiltros}>Aplicar Filtros</button>
-        </div>
 
         {/* =================== KPIs GLOBALES =================== */}
         <div className="kpis-globales">
@@ -102,7 +61,7 @@ export default function EstadisticasAdmin() {
             </div>
             <div className="kpi-contenido">
               <h3>Usuarios Activos</h3>
-              <p className="kpi-numero">{totalUsuarios.toLocaleString()}</p>
+              <p className="kpi-numero">{kpis.totalUsuarios.toLocaleString()}</p>
             </div>
           </div>
 
@@ -112,7 +71,7 @@ export default function EstadisticasAdmin() {
             </div>
             <div className="kpi-contenido">
               <h3>Total Reportes</h3>
-              <p className="kpi-numero">{totalReportes.toLocaleString()}</p>
+              <p className="kpi-numero">{kpis.totalReportes.toLocaleString()}</p>
             </div>
           </div>
 
@@ -122,7 +81,7 @@ export default function EstadisticasAdmin() {
             </div>
             <div className="kpi-contenido">
               <h3>Tasa de Resolución</h3>
-              <p className="kpi-numero">{tasaResolucionGlobal}%</p>
+              <p className="kpi-numero">{kpis.tasaResolucion}%</p>
             </div>
           </div>
 
@@ -132,7 +91,7 @@ export default function EstadisticasAdmin() {
             </div>
             <div className="kpi-contenido">
               <h3>Tiempo Promedio</h3>
-              <p className="kpi-numero">{tiempoPromedioGlobal} días</p>
+              <p className="kpi-numero">{kpis.tiempoPromedioDias || 0} días</p>
             </div>
           </div>
         </div>
@@ -141,7 +100,7 @@ export default function EstadisticasAdmin() {
         <div className="grafico-seccion">
           <h2 className="titulo-grafico">Crecimiento de Usuarios</h2>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={datosUsuarios}>
+            <LineChart data={crecimientoUsuarios}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="mes" />
               <YAxis />
@@ -157,7 +116,7 @@ export default function EstadisticasAdmin() {
         <div className="grafico-seccion">
           <h2 className="titulo-grafico">Volumen de Reportes por Semana</h2>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={datosReportes}>
+            <BarChart data={volumenReportes}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="semana" />
               <YAxis />
@@ -202,7 +161,7 @@ export default function EstadisticasAdmin() {
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie
-                  data={datosCategorias}
+                  data={distribucionCategorias}
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
@@ -210,7 +169,7 @@ export default function EstadisticasAdmin() {
                   nameKey="categoria"
                   label
                 >
-                  {datosCategorias.map((entry, index) => (
+                  {distribucionCategorias.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={colores[index % colores.length]} />
                   ))}
                 </Pie>

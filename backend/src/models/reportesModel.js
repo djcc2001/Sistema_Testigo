@@ -67,7 +67,7 @@ class ReportesModel {
     const countQuery = `
       SELECT COUNT(*) 
       FROM reportes 
-      WHERE estado_id IN (1,2)
+      WHERE estado_id IN (1,2,3)
         AND latitud IS NOT NULL 
         AND longitud IS NOT NULL
     `;
@@ -95,7 +95,7 @@ class ReportesModel {
       LEFT JOIN estado_reporte er ON r.estado_id = er.id
       LEFT JOIN categoria c ON r.categoria_id = c.id
       LEFT JOIN evidencias e ON r.id = e.reporte_id
-      WHERE r.estado_id IN (1,2)
+      WHERE r.estado_id IN (1,2,3)
         AND r.latitud IS NOT NULL 
         AND r.longitud IS NOT NULL
       GROUP BY r.id, er.estado, c.descripcion
@@ -110,7 +110,7 @@ class ReportesModel {
 
   static async obtenerReportesPorUsuario(usuario_id, limite, offset) {
     const countQuery = `
-      SELECT COUNT(*) FROM reportes WHERE ciudadano_id = $1
+      SELECT COUNT(*) FROM reportes WHERE ciudadano_id = $1 AND estado_id IN (1,2,3)
     `;
     const { rows: countRows } = await pool.query(countQuery, [usuario_id]);
     const total = Number(countRows[0].count);
@@ -134,7 +134,7 @@ class ReportesModel {
       LEFT JOIN estado_reporte er ON r.estado_id = er.id
       LEFT JOIN categoria c ON r.categoria_id = c.id
       LEFT JOIN evidencias e ON r.id = e.reporte_id
-      WHERE r.ciudadano_id = $1
+      WHERE r.ciudadano_id = $1 AND r.estado_id IN (1,2,3)
       GROUP BY r.id, er.estado, c.descripcion
       ORDER BY r.fecha DESC, r.hora DESC
       LIMIT $2 OFFSET $3
@@ -149,10 +149,19 @@ class ReportesModel {
       SELECT 
         r.*,
         er.estado AS estado_nombre,
-        c.descripcion AS categoria
+        c.descripcion AS categoria,
+        uc.nombres AS ciudadano_nombre,
+        uc.correo AS ciudadano_correo,
+        ua.id AS autoridad_id,
+        ua.nombres AS autoridad_nombre,
+        ua.correo AS autoridad_correo,
+        ua.nro_celular AS autoridad_telefono,
+        ua.foto AS autoridad_foto
       FROM reportes r
       LEFT JOIN estado_reporte er ON r.estado_id = er.id
       LEFT JOIN categoria c ON r.categoria_id = c.id
+      LEFT JOIN usuarios uc ON r.ciudadano_id = uc.id
+      LEFT JOIN usuarios ua ON r.autoridad_id = ua.id
       WHERE r.id = $1
     `;
 
@@ -202,6 +211,133 @@ class ReportesModel {
   }
 
   // Obtener estadísticas generales del sistema
+  static async obtenerEstadisticasAdmin(filtros = {}) {
+    const { fechaInicio, fechaFin, institucionId } = filtros;
+    
+    // Construir condiciones de fecha
+    let condicionFecha = '';
+    const params = [];
+    let paramIndex = 1;
+    
+    if (fechaInicio && fechaFin) {
+      condicionFecha = `AND r.fecha BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
+      params.push(fechaInicio, fechaFin);
+      paramIndex += 2;
+    }
+
+    // 1. KPIs Globales
+    const kpisQuery = `
+      SELECT 
+        (SELECT COUNT(*) FROM usuarios) as total_usuarios,
+        (SELECT COUNT(*) FROM usuarios WHERE rol = 'ciudadano') as total_ciudadanos,
+        (SELECT COUNT(*) FROM usuarios WHERE rol = 'autoridad') as total_instituciones,
+        COUNT(*) as total_reportes,
+        COUNT(*) FILTER (WHERE r.estado_id = 3) as reportes_resueltos,
+        ROUND(
+          (COUNT(*) FILTER (WHERE r.estado_id = 3)::numeric / 
+          NULLIF(COUNT(*), 0) * 100), 1
+        ) as tasa_resolucion,
+        ROUND(
+          AVG(
+            EXTRACT(EPOCH FROM (NOW() - (r.fecha::timestamp + r.hora::time))) / 86400.0
+          ) FILTER (WHERE r.estado_id = 3), 1
+        ) as tiempo_promedio_dias
+      FROM reportes r
+      WHERE 1=1 ${condicionFecha}
+    `;
+    
+    const { rows: kpisRows } = await pool.query(kpisQuery, params);
+    const kpis = kpisRows[0];
+
+    // 2. Crecimiento de usuarios por mes (últimos 9 meses)
+    const usuariosQuery = `
+      SELECT 
+        TO_CHAR(fecha_registro, 'Mon') as mes,
+        COUNT(*) FILTER (WHERE rol = 'ciudadano') as ciudadanos,
+        COUNT(*) FILTER (WHERE rol = 'autoridad') as instituciones
+      FROM usuarios
+      WHERE fecha_registro >= CURRENT_DATE - INTERVAL '9 months'
+      GROUP BY TO_CHAR(fecha_registro, 'Mon'), DATE_TRUNC('month', fecha_registro)
+      ORDER BY DATE_TRUNC('month', fecha_registro)
+    `;
+    const { rows: usuariosRows } = await pool.query(usuariosQuery);
+
+    // 3. Volumen de reportes por semana (últimas 8 semanas)
+    const reportesQuery = `
+      SELECT 
+        'Sem ' || EXTRACT(WEEK FROM fecha)::text as semana,
+        COUNT(*) as reportes
+      FROM reportes
+      WHERE fecha >= CURRENT_DATE - INTERVAL '8 weeks'
+      GROUP BY EXTRACT(WEEK FROM fecha)
+      ORDER BY EXTRACT(WEEK FROM fecha)
+    `;
+    const { rows: reportesRows } = await pool.query(reportesQuery);
+
+    // 4. Ranking de instituciones
+    const rankingQuery = `
+      SELECT 
+        u.nombres as nombre,
+        COUNT(*) FILTER (WHERE r.estado_id = 3) as resueltos,
+        ROUND(
+          AVG(
+            EXTRACT(EPOCH FROM (NOW() - (r.fecha::timestamp + r.hora::time))) / 86400.0
+          ) FILTER (WHERE r.estado_id = 3), 1
+        ) as tiempo_promedio
+      FROM usuarios u
+      LEFT JOIN reportes r ON u.id = r.autoridad_id
+      WHERE u.rol = 'autoridad'
+      GROUP BY u.id, u.nombres
+      HAVING COUNT(*) FILTER (WHERE r.estado_id = 3) > 0
+      ORDER BY resueltos DESC
+      LIMIT 5
+    `;
+    const { rows: rankingRows } = await pool.query(rankingQuery);
+
+    // 5. Distribución por categoría
+    const categoriasQuery = `
+      SELECT 
+        c.descripcion as categoria,
+        COUNT(r.id) as valor
+      FROM categoria c
+      LEFT JOIN reportes r ON c.id = r.categoria_id
+      ${condicionFecha.replace('AND', 'WHERE')}
+      GROUP BY c.id, c.descripcion
+      ORDER BY valor DESC
+    `;
+    const { rows: categoriasRows } = await pool.query(categoriasQuery, params);
+
+    return {
+      kpis: {
+        totalUsuarios: Number(kpis.total_usuarios) || 0,
+        totalCiudadanos: Number(kpis.total_ciudadanos) || 0,
+        totalInstituciones: Number(kpis.total_instituciones) || 0,
+        totalReportes: Number(kpis.total_reportes) || 0,
+        reportesResueltos: Number(kpis.reportes_resueltos) || 0,
+        tasaResolucion: Number(kpis.tasa_resolucion) || 0,
+        tiempoPromedioDias: Number(kpis.tiempo_promedio_dias) || 0
+      },
+      crecimientoUsuarios: usuariosRows.map(row => ({
+        mes: row.mes,
+        ciudadanos: Number(row.ciudadanos) || 0,
+        instituciones: Number(row.instituciones) || 0
+      })),
+      volumenReportes: reportesRows.map(row => ({
+        semana: row.semana,
+        reportes: Number(row.reportes) || 0
+      })),
+      rankingInstituciones: rankingRows.map(row => ({
+        nombre: row.nombre,
+        resueltos: Number(row.resueltos) || 0,
+        tiempoPromedio: Number(row.tiempo_promedio) || 0
+      })),
+      distribucionCategorias: categoriasRows.map(row => ({
+        categoria: row.categoria,
+        valor: Number(row.valor) || 0
+      }))
+    };
+  }
+
   static async obtenerEstadisticasGenerales() {
     // Total de reportes
     const totalQuery = `SELECT COUNT(*) as total FROM reportes`;
@@ -355,32 +491,32 @@ class ReportesModel {
   }
 
   // Obtener resumen de reportes para autoridad
-  // Incluye reportes sin asignar (NULL) o asignados a esta autoridad
   static async obtenerResumenAutoridad(autoridad_id) {
-    // Recibidos: todos los reportes sin asignar o asignados a esta autoridad
+    // Recibidos: reportes sin asignar (nuevos que acaban de llegar)
     const recibidosQuery = `
       SELECT COUNT(*) as total
       FROM reportes
-      WHERE autoridad_id IS NULL OR autoridad_id = $1
+      WHERE autoridad_id IS NULL
+        AND estado_id = 1
     `;
-    const { rows: recibidosRows } = await pool.query(recibidosQuery, [autoridad_id]);
+    const { rows: recibidosRows } = await pool.query(recibidosQuery);
     const recibidos = Number(recibidosRows[0].total) || 0;
 
-    // Pendientes: reportes sin asignar o asignados con estado Nuevo (1) o En revisión (2)
+    // Pendientes: reportes asignados a esta autoridad con estado Nuevo (1) o En revisión (2)
     const pendientesQuery = `
       SELECT COUNT(*) as total
       FROM reportes
-      WHERE (autoridad_id IS NULL OR autoridad_id = $1)
+      WHERE autoridad_id = $1
         AND estado_id IN (1, 2)
     `;
     const { rows: pendientesRows } = await pool.query(pendientesQuery, [autoridad_id]);
     const pendientes = Number(pendientesRows[0].total) || 0;
 
-    // Resueltos: reportes sin asignar o asignados a esta autoridad con estado Finalizado (3)
+    // Resueltos: reportes asignados a esta autoridad con estado Finalizado (3)
     const resueltosQuery = `
       SELECT COUNT(*) as total
       FROM reportes
-      WHERE (autoridad_id IS NULL OR autoridad_id = $1)
+      WHERE autoridad_id = $1
         AND estado_id = 3
     `;
     const { rows: resueltosRows } = await pool.query(resueltosQuery, [autoridad_id]);

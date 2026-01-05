@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MapPin, User, CalendarDays, Eye, Bell, Clock, CheckCircle } from "lucide-react";
 import PlantillaAdmin from "../components/PlantillaAdmin";
 import ModalDetallesAutoridad from "../components/ModalDetallesAutoridad";
+import api from "../services/api";
 import "../style/ReportesTotales.css";
 
 const ReportesTotales = () => {
@@ -12,92 +13,77 @@ const ReportesTotales = () => {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [reporteSeleccionado, setReporteSeleccionado] = useState(null);
 
-  // Mock de reportes (simulación frontend)
-  const reportes = [
-    {
-      id: 1,
-      titulo: "Bache grande en la calle",
-      direccion: "Calle del medio 246",
-      ubicacion: "Calle del medio 246",
-      fecha: "Jun 24, 2025",
-      ciudadano: "Juan Gonzáles",
-      estado: "Recibido",
-      imagen: "/baches.jpg",
-      evidencias: ["/baches.jpg", "/auto.jpg"],
-      entidad: "Sin Asignar",
-    },
-    {
-      id: 2,
-      titulo: "Falta de mantenimiento en parque",
-      direccion: "Calle del medio 246",
-      ubicacion: "Calle del medio 246",
-      fecha: "Jun 24, 2025",
-      ciudadano: "Juan Gonzáles",
-      estado: "Pendiente",
-      imagen: "/baches.jpg",
-      evidencias: ["/baches.jpg", "/auto.jpg"],
-      entidad: "Sin Asignar",
-    },
-    {
-      id: 3,
-      titulo: "Falla en alumbrado público",
-      direccion: "Calle del medio 246",
-      ubicacion: "Calle del medio 246",
-      fecha: "Jun 24, 2025",
-      ciudadano: "Juan Gonzáles",
-      estado: "Resuelto",
-      imagen: "/baches.jpg",
-      evidencias: ["/baches.jpg", "/auto.jpg"],
-      entidad: "Municipalidad de San Sebastian",
-    },
-    {
-      id: 4,
-      titulo: "Acumulación de basura",
-      direccion: "Av. Principal 123",
-      ubicacion: "Av. Principal 123",
-      fecha: "Jun 20, 2025",
-      ciudadano: "María López",
-      estado: "Recibido",
-      imagen: "/auto.jpg",
-      evidencias: ["/auto.jpg", "/auto.jpg"],
-      entidad: "Sin Asignar",
-    },
-    {
-      id: 5,
-      titulo: "Semáforo dañado",
-      direccion: "Jr. Los Olivos 45",
-      ubicacion: "Jr. Los Olivos 45",
-      fecha: "Jun 18, 2025",
-      ciudadano: "Carlos Ruiz",
-      estado: "Pendiente",
-      imagen: "/auto.jpg",
-      evidencias: ["/auto.jpg", "/baches.jpg"],
-      entidad: "Sin Asignar",
-    },
-  ];
+  // Estados para datos reales
+  const [reportes, setReportes] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Cargar reportes al montar el componente
+  useEffect(() => {
+    cargarReportes();
+  }, []);
+
+  const cargarReportes = async () => {
+    try {
+      setCargando(true);
+      setError(null);
+      
+      // Obtener todos los reportes sin paginación (límite alto)
+      const response = await api.get('/reportes?limite=1000');
+      
+      if (response.data && response.data.reportes) {
+        setReportes(response.data.reportes);
+      }
+    } catch (err) {
+      console.error("Error al cargar reportes:", err);
+      setError("No se pudieron cargar los reportes");
+    } finally {
+      setCargando(false);
+    }
+  };
 
   // Contadores para el resumen
-  const recibidos = reportes.filter(r => r.estado === "Recibido").length;
-  const pendientes = reportes.filter(r => r.estado === "Pendiente").length;
-  const resueltos = reportes.filter(r => r.estado === "Resuelto").length;
+  const recibidos = reportes.filter(r => r.estado_nombre === "Nuevo").length;
+  const pendientes = reportes.filter(r => r.estado_nombre === "En revisión").length;
+  const resueltos = reportes.filter(r => r.estado_nombre === "Finalizado").length;
 
   // Filtrado dinámico
   const reportesFiltrados = reportes.filter((r) => {
     const coincideBusqueda = busqueda.trim() === "" || 
-      r.titulo.toLowerCase().includes(busqueda.toLowerCase()) ||
-      r.ubicacion.toLowerCase().includes(busqueda.toLowerCase()) ||
-      r.ciudadano.toLowerCase().includes(busqueda.toLowerCase());
+      r.titulo?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      r.direccion?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      r.distrito?.toLowerCase().includes(busqueda.toLowerCase());
 
-    const coincideEstado = filtroEstado === "todos" || 
-      r.estado.toLowerCase() === filtroEstado.toLowerCase();
+    let coincideEstado = true;
+    if (filtroEstado === "recibido") {
+      coincideEstado = r.estado_nombre === "Nuevo";
+    } else if (filtroEstado === "pendiente") {
+      coincideEstado = r.estado_nombre === "En revisión";
+    } else if (filtroEstado === "resuelto") {
+      coincideEstado = r.estado_nombre === "Finalizado";
+    }
 
     return coincideBusqueda && coincideEstado;
   });
+
+  // Formatear fecha
+  const formatearFecha = (fecha) => {
+    if (!fecha) return "Sin fecha";
+    const date = new Date(fecha);
+    return date.toLocaleDateString('es-PE', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
 
   // Función para abrir modal con detalles del reporte
   const handleVerDetalles = (reporte) => {
     setReporteSeleccionado(reporte);
     setModalAbierto(true);
+  };
+
+  // Cerrar modal y recargar
+  const handleCerrarModal = () => {
+    setModalAbierto(false);
+    setReporteSeleccionado(null);
+    cargarReportes(); // Recargar por si hubo cambios
   };
 
   return (
@@ -166,49 +152,78 @@ const ReportesTotales = () => {
         {/* Título de la lista */}
         <h2 className="titulo-lista">Lista de reportes</h2>
 
-        {/* Lista de reportes */}
-        <div className="lista-reportes-admin">
-          {reportesFiltrados.length === 0 ? (
-            <p className="sin-resultados">No se encontraron reportes con los criterios seleccionados.</p>
-          ) : (
-            reportesFiltrados.map((r) => (
-              <div key={r.id} className="tarjeta-reporte-admin">
-                <div className="imagen-reporte">
-                  <img src={r.imagen} alt={r.titulo} />
-                </div>
+        {/* Estado de carga */}
+        {cargando && (
+          <div style={{ textAlign: "center", padding: "2rem" }}>
+            Cargando reportes...
+          </div>
+        )}
 
-                <div className="contenido-reporte">
-                  <h3 className="titulo-reporte-admin">{r.titulo}</h3>
-                  
-                  <div className="detalles-reporte">
-                    <p className="linea-detalle">
-                      <MapPin size={16} /> {r.ubicacion}
-                    </p>
-                    <p className="linea-detalle">
-                      <CalendarDays size={16} /> {r.fecha}
-                    </p>
-                    <p className="linea-detalle">
-                      <User size={16} /> {r.ciudadano}
-                    </p>
+        {/* Error */}
+        {error && (
+          <div style={{ 
+            textAlign: "center", 
+            padding: "2rem", 
+            color: "#e74c3c",
+            backgroundColor: "#fadbd8",
+            borderRadius: "8px",
+            margin: "1rem"
+          }}>
+            {error}
+          </div>
+        )}
+
+        {/* Lista de reportes */}
+        {!cargando && !error && (
+          <div className="lista-reportes-admin">
+            {reportesFiltrados.length === 0 ? (
+              <p className="sin-resultados">No se encontraron reportes con los criterios seleccionados.</p>
+            ) : (
+              reportesFiltrados.map((r) => (
+                <div key={r.id} className="tarjeta-reporte-admin">
+                  <div className="imagen-reporte">
+                    <img 
+                      src={r.evidencias?.[0]?.url || "/placeholder.jpg"} 
+                      alt={r.titulo}
+                      onError={(e) => {
+                        e.target.src = "/placeholder.jpg";
+                      }}
+                    />
                   </div>
-                  {/* BOTÓN QUE AHORA ABRE EL MODAL */}
-                  <button
-                    className="boton-ver-detalles"
-                    onClick={() => handleVerDetalles(r)}
-                  >
-                    <Eye size={16} /> Ver Detalles
-                  </button>
+
+                  <div className="contenido-reporte">
+                    <h3 className="titulo-reporte-admin">{r.titulo}</h3>
+                    
+                    <div className="detalles-reporte">
+                      <p className="linea-detalle">
+                        <MapPin size={16} /> {r.direccion || r.distrito || "Sin ubicación"}
+                      </p>
+                      <p className="linea-detalle">
+                        <CalendarDays size={16} /> {formatearFecha(r.fecha)}
+                      </p>
+                      <p className="linea-detalle">
+                        <User size={16} /> Estado: {r.estado_nombre || "Sin estado"}
+                      </p>
+                    </div>
+                    {/* BOTÓN QUE AHORA ABRE EL MODAL */}
+                    <button
+                      className="boton-ver-detalles"
+                      onClick={() => handleVerDetalles(r)}
+                    >
+                      <Eye size={16} /> Ver Detalles
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* Modal de detalles */}
       <ModalDetallesAutoridad
         open={modalAbierto}
-        onClose={() => setModalAbierto(false)}
+        onClose={handleCerrarModal}
         reporte={reporteSeleccionado}
       />
     </PlantillaAdmin>

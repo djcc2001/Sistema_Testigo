@@ -28,34 +28,76 @@
 
 .sidebar .perfil {
   text-align: center;
-  padding: 15px 15px;
+  padding: 25px 15px 30px;
+  background: transparent;
 }
 
 .sidebar .foto-usuario {
-  width: 70px;
-  height: 70px;
+  width: 90px;
+  height: 90px;
   border-radius: 50%;
-  background: #D9D9D9;
-  margin: 0 auto 8px;
+  background: #fff;
+  margin: 0 auto 15px;
+  overflow: hidden;
+  border: 3px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-.sidebar .perfil p {
-  font-family: 'Playfair Display', serif;
-  font-weight: 700;
-  font-size: 14px;
-  line-height: 20px;
-  margin: 3px 0;
-  color: #292525;
-  text-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+.sidebar .foto-usuario img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.sidebar .perfil span {
+.sidebar .perfil .titulo-bienvenida {
   font-family: 'Playfair Display', serif;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 12px;
-  line-height: 18px;
-  color: #292525;
-  text-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  line-height: 16px;
+  margin: 5px 0;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.sidebar .perfil .nombre-usuario {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 24px;
+  margin: 5px 0;
+  color: #FFFFFF;
+  text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar .perfil .rol-usuario {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 11px;
+  line-height: 16px;
+  color: rgba(255, 255, 255, 0.85);
+  display: block;
+  margin-top: 5px;
+}
+
+/* Estilos específicos para el perfil de administrador */
+.sidebar .perfil-admin .admin-badge {
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar .perfil-admin .admin-badge svg {
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
+}
+
+.sidebar .perfil-admin .titulo-bienvenida {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
 }
 
 .sidebar .menu {

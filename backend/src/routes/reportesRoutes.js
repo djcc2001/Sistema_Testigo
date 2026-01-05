@@ -27,6 +27,9 @@ router.get('/recientes', reportesController.obtenerReportesRecientes);
 // RUTA: Obtener estadísticas generales (público)
 router.get('/estadisticas/generales', reportesController.obtenerEstadisticasGenerales);
 
+// RUTA: Obtener estadísticas del administrador (requiere autenticación)
+router.get('/estadisticas/admin', verificarToken, reportesController.obtenerEstadisticasAdmin);
+
 // RUTA: Obtener estadísticas del ciudadano autenticado
 router.get('/estadisticas/ciudadano', verificarToken, reportesController.obtenerEstadisticasCiudadano);
 

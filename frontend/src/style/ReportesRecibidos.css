@@ -1,3 +1,4 @@
+/* Contenedor principal */
 .mis-reportes {
   display: flex;
   flex-direction: column;
@@ -5,6 +6,31 @@
   padding: 15px;
 }
 
+/* Barra de acciones con búsqueda */
+.acciones-barra {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.buscador {
+  flex: 1;
+  padding: 10px 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.buscador:focus {
+  border-color: #0b8f26;
+}
+
+/* Tarjeta de reporte */
 .reporte-card {
   display: flex;
   align-items: center;
@@ -72,6 +98,36 @@
   background-color: #59DC75;
   color: #647800;
 }
+
+.estado.revision {
+  background-color: #FFD93D;
+  color: #A05000;
+}
+
+.estado.finalizado {
+  background-color: #6BCB77;
+  color: #2D5E35;
+}
+
+.estado.archivado {
+  background-color: #95A5A6;
+  color: #2C3E50;
+}
+
+/* Animación para el spinner */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
 .btn-detalle {
   display: flex;
   align-items: center;

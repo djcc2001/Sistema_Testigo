@@ -233,6 +233,31 @@ exports.obtenerReportesRecientes = async (req, res) => {
 };
 
 // Obtener estadísticas generales del sistema
+exports.obtenerEstadisticasAdmin = async (req, res) => {
+  try {
+    const { fechaInicio, fechaFin, institucionId } = req.query;
+    
+    console.log('Obteniendo estadísticas del admin con filtros:', { fechaInicio, fechaFin, institucionId });
+
+    const estadisticas = await ReportesModel.obtenerEstadisticasAdmin({
+      fechaInicio,
+      fechaFin,
+      institucionId
+    });
+
+    res.json({
+      ok: true,
+      estadisticas
+    });
+  } catch (error) {
+    console.error('Error al obtener estadísticas del admin:', error);
+    res.status(500).json({
+      error: 'Error al obtener estadísticas',
+      detalles: error.message
+    });
+  }
+};
+
 exports.obtenerEstadisticasGenerales = async (req, res) => {
   try {
     console.log("Obteniendo estadísticas generales");
@@ -365,11 +390,23 @@ exports.actualizarReporte = async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: "Estado no válido" });
     }
 
-    // Obtener estado anterior
+    // Obtener estado anterior y datos del reporte
     const reporteAnterior = await ReportesModel.obtenerReportePorId(id);
 
+    // Determinar la autoridad a asignar
+    let autoridadFinal = asignadoA || null;
+    
+    // Si no hay autoridad asignada y el usuario actual es autoridad, auto-asignarse
+    if (!autoridadFinal && !reporteAnterior.autoridad_id && req.user?.rol === 'autoridad') {
+      autoridadFinal = req.user.id;
+      console.log(`Auto-asignando reporte ${id} a autoridad ${req.user.id}`);
+    } else if (!autoridadFinal && reporteAnterior.autoridad_id) {
+      // Si ya tenía autoridad asignada, mantenerla
+      autoridadFinal = reporteAnterior.autoridad_id;
+    }
+
     const reporteActualizado = await ReportesModel.actualizarReporte(id, {
-      autoridad_id: asignadoA || null,
+      autoridad_id: autoridadFinal,
       estado_id: estado_id,
       comentario: comentario || ""
     });
