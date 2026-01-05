@@ -1,5 +1,5 @@
 const pool = require("../config/db");
-const { enviarCorreo } = require("../config/mailer");
+const { enviarSMS } = require("../services/twiloService");
 
 async function notificarCambioEstado({ reporteId }) {
   try {
@@ -7,7 +7,7 @@ async function notificarCambioEstado({ reporteId }) {
       SELECT 
         r.titulo,
         u.id AS usuario_id,
-        u.correo,
+        u.nro_celular AS celular,
         e.estado,
         COALESCE(a.nombres || ' ' || a.apellido_paterno, 'No asignada') AS autoridad
       FROM reportes r
@@ -17,24 +17,24 @@ async function notificarCambioEstado({ reporteId }) {
       WHERE r.id = $1
     `;
 
+
     const { rows } = await pool.query(query, [reporteId]);
-    if (rows.length === 0) return;
+    if (!rows.length) return;
 
-    const { titulo, usuario_id, correo, estado, autoridad } = rows[0];
+    const { titulo, usuario_id, celular, estado, autoridad } = rows[0];
 
-    const mensaje = `
-Cambio de estado de su reporte
+    const mensaje = `Sistema Testigo:
+Su denuncia "${titulo}" cambió a estado: ${estado}.
+Autoridad: ${autoridad}.`;
 
-Título: ${titulo}
-Nuevo estado: ${estado}
-Autoridad asignada: ${autoridad}
-Fecha: ${new Date().toLocaleString("es-PE")}
-    `;
+    if (!celular) {
+      console.error(`❌ Usuario ${usuario_id} no tiene celular registrado`);
+      return;
+    }
 
-    await enviarCorreo({
-      to: correo,
-      subject: "Actualización de su reporte",
-      text: mensaje
+    await enviarSMS({
+      to: `+51${celular}`,
+      message: mensaje
     });
 
     await pool.query(

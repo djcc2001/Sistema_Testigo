@@ -14,7 +14,7 @@ const CrearUsuario = () => {
     dni: '',
     nombres: '',
     apellidos: '',
-    rol: 'Usuario',
+    rol: 'ciudadano',
     correo: '',
     celular: '',
     contrasena: '',
