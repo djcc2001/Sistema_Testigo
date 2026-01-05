@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { createUserAdmin } from '../services/api';
 import { useNavigate } from "react-router-dom";
 import PlantillaAdmin from '../components/PlantillaAdmin';
+import { consultarRENIEC } from '../services/reniecService';
 import '../style/CrearUsuario.css';
 
 const CrearUsuario = () => {
@@ -19,6 +20,10 @@ const CrearUsuario = () => {
     contrasena: '',
     confirmarContrasena: '',
   });
+  const [errors, setErrors] = useState({});
+  const [isDNIValidated, setIsDNIValidated] = useState(false);
+  const [isConsulting, setIsConsulting] = useState(false);
+
   const handleCancel = () => {
     navigate("/admin/dashboard");
   };
@@ -29,8 +34,43 @@ const CrearUsuario = () => {
   // Maneja cambios en los campos del formulario
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData(prev => ({ ...prev, [name]: value }));
+
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+
+    if (name === 'dni') {
+      setIsDNIValidated(false);
+      setFormData(prev => ({ ...prev, nombres: '', apellidos: '' }));
+    }
   };
+  const handleConsultarDNI = async () => {
+    if (!formData.dni || formData.dni.length !== 8 || !/^\d+$/.test(formData.dni)) {
+      setErrors(prev => ({ ...prev, dni: 'DNI inválido. Debe tener 8 números.' }));
+      return;
+    }
+
+    setIsConsulting(true);
+    setErrors(prev => ({ ...prev, dni: '' }));
+
+    try {
+      const userData = await consultarRENIEC(formData.dni);
+      setFormData(prev => ({
+        ...prev,
+        nombres: userData.nombres,
+        apellidos: userData.apellidos
+      }));
+      setIsDNIValidated(true);
+    } catch (error) {
+      setErrors(prev => ({ ...prev, dni: error.message }));
+      setIsDNIValidated(false);
+    } finally {
+      setIsConsulting(false);
+    }
+  };
+
+
 
   // Maneja la subida de imagen de perfil
   const handleImagenChange = (e) => {
@@ -85,20 +125,43 @@ const CrearUsuario = () => {
             <form className="user-form" onSubmit={handleSubmit}>
               {/* Campos del formulario */}
               <div className="form-group">
-                <div className='DNI'> 
-                  <label>Nº de DNI:</label> 
-                  <input type="text" name="dni" value={formData.dni} onChange={handleChange}/> 
+                <label>Nº de DNI:</label>
+                <div className="dni-container">
+                  <input
+                    type="text"
+                    name="dni"
+                    value={formData.dni}
+                    onChange={handleChange}
+                    maxLength="8"
+                    disabled={isDNIValidated}
+                  />
+                  <button
+                    type="button"
+                    className={`consultar-btn ${isDNIValidated ? 'validated' : ''}`}
+                    onClick={handleConsultarDNI}
+                    disabled={isConsulting || isDNIValidated}
+                  >
+                    {isConsulting ? 'Consultando...' : isDNIValidated ? 'Validado' : 'Consultar'}
+                  </button>
                 </div>
+
+                {errors.dni && <div className="error-message">{errors.dni}</div>}
+                {isDNIValidated && !errors.dni && (
+                  <div style={{ color: 'green', fontSize: '12px' }}>
+                    DNI verificado correctamente
+                  </div>
+                )}
               </div>
+
 
               <div className="form-group">
                 <label>Nombres:</label>
-                <input type="text" name="nombres" value={formData.nombres} onChange={handleChange}/>
+                <input type="text" name="nombres" value={formData.nombres} onChange={handleChange} readOnly={isDNIValidated}/>
               </div>
 
               <div className="form-group">
                 <label>Apellidos:</label>
-                <input type="text" name="apellidos" value={formData.apellidos} onChange={handleChange}/>
+                <input type="text" name="apellidos" value={formData.apellidos} onChange={handleChange} readOnly={isDNIValidated}/>
               </div>
 
               <div className="form-group">
