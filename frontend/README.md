@@ -1,70 +1,105 @@
-# Getting Started with Create React App
+# Sistema Testigo
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Plataforma de reportes ciudadanos de tráfico e infraestructura. Permite a los usuarios reportar incidencias viales y problemas de infraestructura, mientras que las autoridades pueden gestionar, revisar y dar seguimiento a los reportes.
 
-## Available Scripts
+## Roles de Usuario
 
-In the project directory, you can run:
+- **Ciudadano**: Puede crear reportes con ubicación geográfica, agregar evidencia (fotos), ver el estado de sus reportes y recibir notificaciones.
+- **Autoridad**: Puede asignar reportes, cambiar estados, agregar comentarios, ver estadísticas y gestionar usuarios de su institución.
 
-### `npm start`
+## Arquitectura
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Frontend**: React 19 con rutas protegidas basadas en roles
+- **Backend**: Express.js + Node.js con API REST
+- **Base de Datos**: PostgreSQL
+- **Despliegue**: Variables de entorno para configuración
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Variables de Entorno Necesarias
 
-### `npm test`
+### Backend (`backend/.env`)
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Copia el archivo `backend/.env.example` y completa con los valores reales:
 
-### `npm run build`
+```
+PORT=4000
+FRONTEND_URL=http://localhost:3000
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+DB_USER=tu_usuario_db
+DB_HOST=localhost
+DB_NAME=sistema_testigo
+DB_PASS=tu_contraseña_db
+DB_PORT=5432
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+JWT_SECRET=tu_jwt_secret_muy_seguro_aqui
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+CLOUDINARY_CLOUD_NAME=tu_nombre_cloudinary
+CLOUDINARY_API_KEY=tu_api_key_cloudinary
+CLOUDINARY_API_SECRET=tu_api_secret_cloudinary
 
-### `npm run eject`
+DECOLECTA_TOKEN=tu_token_de_decolecta
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### Frontend (`frontend/.env`)
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+El frontend usa variables `REACT_APP_` prefijadas:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```
+REACT_APP_DECOLECTA_TOKEN=tu_token_de_decolecta
+REACT_APP_API_BASE_URL=http://localhost:4000
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Levantando el Proyecto Localmente
 
-## Learn More
+### 1. Clonar el repositorio
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+git clone <url-del-repositorio>
+cd Sistema_Testigo
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### 2. Levantar el Backend
 
-### Code Splitting
+```bash
+cd backend
+npm install
+cp .env.example .env  # completar con valores reales
+npm start   # o: npm dev (con nodemon)
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+El servidor correrá en `http://localhost:4000`
 
-### Analyzing the Bundle Size
+### 3. Levantar el Frontend
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+```bash
+cd frontend
+npm install
+cp .env.example .env  # completar con valores reales
+npm start
+```
 
-### Making a Progressive Web App
+La aplicación estará disponible en `http://localhost:3000`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### 4. Base de Datos (PostgreSQL)
 
-### Advanced Configuration
+Asegúrate de tener PostgreSQL corriendo y la base de datos `sistema_testigo` creada. Las migraciones o el esquema de la base de datos debe estar configurado según `backend/src/config/db.js`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Scripts Disponibles
 
-### Deployment
+### Backend:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+- `npm start` - Iniciar servidor en producción
+- `npm dev` - Iniciar con nodemon (modo desarrollo)
 
-### `npm run build` fails to minify
+### Frontend:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- `npm start` - Ejecutar en modo desarrollo (http://localhost:3000)
+- `npm build` - Generar build de producción
+- `npm test` - Ejecutar el suite de tests
+
+## Seguridad
+
+- Las credenciales sensibles deben venir siempre de variables de entorno (nunca hardcodeadas)
+- El archivo `Revisar` (anterior `.env` versionado) ha sido eliminado del repositorio
+- Los secretos rotados manualmente si estuvieron expuestos en historial de git
+- CORS está restringido a `FRONTEND_URL` configurado
+- Las rutas protegidas validan rol y token JWT

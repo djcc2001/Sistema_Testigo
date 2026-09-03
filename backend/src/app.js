@@ -15,7 +15,11 @@ const pool = require('./config/db'); // Inicializa conexión con la base de dato
 const app = express();
 
 // Middlewares
-app.use(cors());           // Permite solicitudes desde otros dominios
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+};
+app.use(cors(corsOptions));
 app.use(express.json());   // Parseo de JSON en el body de las solicitudes
 app.use('/categorias', require('./routes/categorias'));
 

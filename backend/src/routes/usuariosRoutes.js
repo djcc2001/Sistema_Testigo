@@ -63,8 +63,7 @@ router.delete(
   permitirRol(['admin']),
   async (req, res, next) => {
     try {
-      await usuariosController.eliminarUsuarioPorId(req.params.id);
-      res.json({ ok: true, mensaje: 'Usuario eliminado correctamente' });
+      await usuariosController.eliminarUsuarioPorId(req, res, next);
     } catch (error) {
       next(error);
     }

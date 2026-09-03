@@ -42,9 +42,6 @@ router.get('/autoridad/resumen', verificarToken, reportesController.obtenerResum
 // RUTA: Listar reportes asignados a autoridad con filtros
 router.get('/autoridad/reportes', verificarToken, reportesController.listarReportesAutoridad);
 
-// RUTA: Listar reportes en revisión (autoridad)
-//router.get('/autoridad/reportesRevision', verificarToken, reportesController.listarReportesEnRevision);
-
 // RUTA: Obtener reportes del usuario autenticado
 router.get('/usuario/mis-reportes', verificarToken, reportesController.obtenerReportesDelUsuario);
 

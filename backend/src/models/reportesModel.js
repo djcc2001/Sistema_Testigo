@@ -373,8 +373,6 @@ class ReportesModel {
       ? Math.round(Number(tiempoRows[0].horas_promedio)) 
       : 0;
 
-    tiempoPromedioHoras = 12;
-
     return {
       totalReportes,
       tasaResolucion,

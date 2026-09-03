@@ -4,9 +4,11 @@
 /backend/node_modules
 /backend/dist
 /backend/.env
+/backend/.env.example
 /backend/npm-debug.log*
 /backend/yarn-debug.log*
 /backend/yarn-error.log*
+/backend/Revisar
 
 # =========================
 # React / Frontend

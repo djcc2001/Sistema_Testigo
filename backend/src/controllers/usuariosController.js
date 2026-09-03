@@ -196,16 +196,23 @@ const listarInstituciones = async (req, res) => {
 };
 
 // Eliminar usuario por ID (modo admin)
-const eliminarUsuarioPorId = async (id) => {
-  const eliminado = await usuariosModel.eliminarUsuario(id);
+const eliminarUsuarioPorId = async (req, res, next) => {
+  try {
+    // Validación: impedir que el usuario se elimine a sí mismo
+    if (req.user.id === parseInt(req.params.id)) {
+      return res.status(403).json({ ok: false, mensaje: 'No se puede eliminar su propia cuenta' });
+    }
 
-  if (!eliminado) {
-    const error = new Error('Usuario no encontrado');
-    error.status = 404;
-    throw error;
+    const usuario = await usuariosModel.eliminarUsuario(req.params.id);
+
+    if (!usuario) {
+      return res.status(404).json({ ok: false, mensaje: 'Usuario no encontrado' });
+    }
+
+    return res.json({ ok: true, mensaje: 'Usuario eliminado correctamente' });
+  } catch (error) {
+    next(error);
   }
-
-  return eliminado;
 };
 
 // Obtener autoridades activas (para el modal)
